@@ -22,3 +22,9 @@ type BallotWithRole struct {
 	Ballot Ballot
 	Role   Role
 }
+
+type Committee struct {
+	Committee    string
+	MemberStatus string
+	Domain       string
+}

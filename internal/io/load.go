@@ -1,6 +1,7 @@
 package io
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -23,6 +24,8 @@ func LoadFile(path string) []map[string]string {
 	default:
 		panic("unsupported file type")
 	}
+
+	log.Printf("loaded rows from %s, length %d\n", path, len(rows))
 
 	return rows
 }

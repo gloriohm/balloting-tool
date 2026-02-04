@@ -35,7 +35,16 @@ var HeaderAliases = map[string]string{
 
 func IsVoterRole(raw string) bool {
 	switch NormalizeString(raw) {
-	case "voter", "cen_voter":
+	case "voter", "cen_voter", "obligated_voter":
+		return true
+	default:
+		return false
+	}
+}
+
+func IsMemberStatus(raw string) bool {
+	switch NormalizeString(raw) {
+	case "p_member", "o_member":
 		return true
 	default:
 		return false
