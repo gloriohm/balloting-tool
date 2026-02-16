@@ -5,6 +5,8 @@ type Config struct {
 	OutputPath        string   `json:"outputPath"`
 	InputPath         string   `json:"inputPathSuffix"`
 	Files             Files    `json:"files"`
+	Username          string   `json:"username"`
+	Password          string   `json:"password"`
 }
 
 type Files struct {
