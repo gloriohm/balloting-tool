@@ -1,6 +1,7 @@
-package io
+package ballot
 
 import (
+	"ballot-tool/internal/utils"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ func LoadFile(path string) ([]map[string]string, error) {
 	}
 	defer f.Close()
 
-	if err := validateTimestamp(f); err != nil {
+	if err := utils.ValidateTimestamp(f); err != nil {
 		return nil, err
 	}
 

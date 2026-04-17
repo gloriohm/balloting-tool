@@ -1,4 +1,4 @@
-package io
+package utils
 
 import (
 	"bufio"
@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func detectDelimiter(r io.Reader) (rune, *bufio.Reader, error) {
+func DetectDelimiter(r io.Reader) (rune, *bufio.Reader, error) {
 	br := bufio.NewReader(r)
 
 	peek, err := br.Peek(4096)

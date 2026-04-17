@@ -11,6 +11,7 @@ func main() {
 	member := flag.Bool("opt", false, "enable option")
 
 	if err := app.Run(*member); err != nil {
-		log.Fatalf("noe gikk galt %s", err)
+		log.Fatalf("noe gikk galt: %s", err)
 	}
+
 }

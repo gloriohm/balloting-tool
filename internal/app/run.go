@@ -1,12 +1,17 @@
 package app
 
 import (
-	"ballot-tool/internal/io"
-	"ballot-tool/internal/processing"
+	"ballot-tool/internal/ballot"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
+)
+
+const (
+	url          = "https://isotc.iso.org/livelink/eb3/part/viewMyBallots.do?method=doVoteRequired&org.apache.struts.taglib.html.CANCEL=true&startIndex=0"
+	cenBallotURL = "https://cen.iso.org/livelink/eb33/part/exportBallotListXLS.do?noreset=true"
+	isoBallotURL = "https://isotc.iso.org/livelink/eb3/part/exportBallotListXLS.do?noreset=true"
 )
 
 func Run(opt bool) error {
@@ -29,16 +34,16 @@ func Run(opt bool) error {
 		return err
 	}
 
-	requiredBallots, balloutsWithoutVoter := processing.JoinBallotRole(roles, ballots)
+	requiredBallots, balloutsWithoutVoter := ballot.JoinBallotRole(roles, ballots)
 
 	fileName := fmt.Sprintf("utestående_avstemninger-%s.xlsx", time.Now().Format("2006-01-02"))
 	outPath := filepath.Join(cfg.OutputPath, fileName)
-	if err := io.WriteBallotWithRoleXLSX(outPath, requiredBallots, cfg.CentralizedVoters); err != nil {
+	if err := ballot.WriteBallotWithRoleXLSX(outPath, requiredBallots, cfg.CentralizedVoters); err != nil {
 		return err
 	}
 
 	missingVoterPath := filepath.Join(cfg.OutputPath, "missing.txt")
-	if err = io.WriteBallotsTXT(missingVoterPath, balloutsWithoutVoter); err != nil {
+	if err = ballot.WriteBallotsTXT(missingVoterPath, balloutsWithoutVoter); err != nil {
 		return err
 	}
 
@@ -47,9 +52,9 @@ func Run(opt bool) error {
 		if err != nil {
 			return err
 		}
-		memberWithoutVoter := processing.JoinCommitteeRole(roles, orgRoles)
+		memberWithoutVoter := ballot.JoinCommitteeRole(roles, orgRoles)
 		memberStatus := filepath.Join(cfg.OutputPath, "member_status.txt")
-		if err = io.WriteCommitteesTXT(memberStatus, memberWithoutVoter); err != nil {
+		if err = ballot.WriteCommitteesTXT(memberStatus, memberWithoutVoter); err != nil {
 			return err
 		}
 	}

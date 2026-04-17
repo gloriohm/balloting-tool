@@ -1,15 +1,14 @@
-package processing
+package ballot
 
 import (
-	"ballot-tool/internal/models"
 	"log"
 )
 
-func JoinBallotRole(roles []models.Role, ballots []models.Ballot) ([]models.BallotWithRole, []models.Ballot) {
+func JoinBallotRole(roles []Role, ballots []Ballot) ([]BallotWithRole, []Ballot) {
 	roleCommitteeIdx := createRoleComIdx(roles)
 
-	matches := make([]models.BallotWithRole, 0, len(ballots))
-	missing := make([]models.Ballot, 0, len(ballots))
+	matches := make([]BallotWithRole, 0, len(ballots))
+	missing := make([]Ballot, 0, len(ballots))
 	for _, b := range ballots {
 		match, ok := roleCommitteeIdx[b.Committee]
 		if !ok {
@@ -17,7 +16,7 @@ func JoinBallotRole(roles []models.Role, ballots []models.Ballot) ([]models.Ball
 			continue
 		}
 
-		matches = append(matches, models.BallotWithRole{
+		matches = append(matches, BallotWithRole{
 			Ballot: b,
 			Role:   *match,
 		})
@@ -29,10 +28,10 @@ func JoinBallotRole(roles []models.Role, ballots []models.Ballot) ([]models.Ball
 	return matches, missing
 }
 
-func JoinCommitteeRole(roles []models.Role, coms []models.Committee) []models.Committee {
+func JoinCommitteeRole(roles []Role, coms []Committee) []Committee {
 	roleCommitteeIdx := createRoleComIdx(roles)
 
-	missing := make([]models.Committee, 0, len(coms))
+	missing := make([]Committee, 0, len(coms))
 
 	for _, c := range coms {
 		_, ok := roleCommitteeIdx[c.Committee]
