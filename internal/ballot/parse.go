@@ -2,112 +2,96 @@ package ballot
 
 import (
 	"ballot-tool/internal/utils"
-	"encoding/csv"
 	"fmt"
-	"io"
+	"log"
 	"strings"
-
-	"github.com/xuri/excelize/v2"
 )
 
-func ReadCSV(r io.Reader) ([]map[string]string, error) {
-	delimiter, br, err := utils.DetectDelimiter(r)
-	if err != nil {
-		return nil, err
-	}
-	cr := csv.NewReader(br)
-	cr.Comma = delimiter
-	cr.TrimLeadingSpace = true
-	rawHeader, err := cr.Read()
-	if err != nil {
-		return nil, err
-	}
-	headers := make([]string, len(rawHeader))
-
-	for i, h := range rawHeader {
-		nh := utils.NormalizeString(h)
-		if canon, ok := headerAliases[nh]; ok {
-			headers[i] = canon
-		} else {
-			headers[i] = nh
+func parseRoles(rows []map[string]string) ([]Role, []error) {
+	out := make([]Role, 0, len(rows))
+	var errs []error
+	for i, row := range rows {
+		rawRole := row["role"]
+		if !isVoterRole(rawRole) {
+			continue
 		}
-	}
-
-	var rows []map[string]string
-	for {
-		rec, err := cr.Read()
-		if err == io.EOF {
-			break
+		commitmentStatus := row["commitment_status"]
+		if commitmentStatus != "" && commitmentStatus != "active" {
+			continue
 		}
-		if err != nil {
-			return nil, err
-		}
-		m := make(map[string]string)
-		for i, cell := range rec {
-			m[headers[i]] = strings.TrimSpace(cell)
-		}
-		rows = append(rows, m)
-	}
-
-	return rows, nil
-}
-
-func ReadXLSX(r io.Reader, sheetName string) ([]map[string]string, error) {
-	f, err := excelize.OpenReader(r)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = f.Close() }()
-
-	if sheetName == "" {
-		sheets := f.GetSheetList()
-		if len(sheets) == 0 {
-			return nil, fmt.Errorf("xlsx: no sheets found")
-		}
-		sheetName = sheets[0]
-	}
-
-	allRows, err := f.GetRows(sheetName)
-	if err != nil {
-		return nil, err
-	}
-	if len(allRows) == 0 {
-		return []map[string]string{}, nil
-	}
-
-	rawHeader := allRows[0]
-	headers := make([]string, len(rawHeader))
-	for i, h := range rawHeader {
-		nh := utils.NormalizeString(h)
-		if canon, ok := headerAliases[nh]; ok {
-			headers[i] = canon
-		} else {
-			headers[i] = nh
-		}
-	}
-
-	rows := make([]map[string]string, 0, max(0, len(allRows)-1))
-	for _, rec := range allRows[1:] {
-		empty := true
-		for _, c := range rec {
-			if strings.TrimSpace(c) != "" {
-				empty = false
-				break
-			}
-		}
-		if empty {
+		com := strings.TrimSpace(row["committee"])
+		if com == "" {
+			errs = append(errs, fmt.Errorf("row %d: missing committee reference", i+1))
 			continue
 		}
 
-		m := make(map[string]string, len(headers))
-		for i := 0; i < len(rec) && i < len(headers); i++ {
-			m[headers[i]] = strings.TrimSpace(rec[i])
-		}
-		for i := len(rec); i < len(headers); i++ {
-			m[headers[i]] = ""
-		}
-		rows = append(rows, m)
+		out = append(out, Role{
+			Committee: com,
+			FirstName: row["first_name"],
+			LastName:  row["last_name"],
+			Email:     row["email"],
+		})
 	}
 
-	return rows, nil
+	log.Printf("parsed roles, length %d\n", len(out))
+	return out, errs
+}
+
+func parseBallots(rows []map[string]string) ([]Ballot, []error) {
+	out := make([]Ballot, 0, len(rows))
+	var errs []error
+	for i, row := range rows {
+		com := strings.TrimSpace(row["committee"])
+		if com == "" {
+			errs = append(errs, fmt.Errorf("row %d: missing committee reference", i+1))
+			continue
+		}
+		close := strings.TrimSpace(row["closes"])
+		if close == "" {
+			continue
+		}
+		closeTime, err := utils.ParseDate(close)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("row %d: closing date not formatted as ISO date", i+1))
+			continue
+		}
+
+		out = append(out, Ballot{
+			Source:    row["source"],
+			Committee: com,
+			Reference: row["reference"],
+			Closing:   closeTime,
+			Title:     row["title"],
+			URL:       row["url"],
+		})
+	}
+
+	log.Printf("parsed ballots, length %d\n", len(out))
+	return out, errs
+}
+
+func parseCommittees(rows []map[string]string) ([]Committee, []error) {
+	out := make([]Committee, 0, len(rows))
+	var errs []error
+
+	for i, row := range rows {
+		role := strings.TrimSpace(row["role"])
+		if !isMemberStatus(role) {
+			continue
+		}
+		com := strings.TrimSpace(row["committee"])
+		if com == "" {
+			errs = append(errs, fmt.Errorf("row %d: missing committee reference", i+1))
+			continue
+		}
+
+		out = append(out, Committee{
+			Committee:    com,
+			MemberStatus: role,
+			Domain:       row["domain"],
+		})
+	}
+
+	log.Printf("parsed committees, length %d\n", len(out))
+	return out, errs
 }

@@ -1,22 +1,17 @@
-package ballot
+package utils
 
 import (
-	"ballot-tool/internal/utils"
 	"log"
 	"os"
 	"path/filepath"
 )
 
-func LoadFile(path string) ([]map[string]string, error) {
+func LoadTabularDataFromFile(path string) ([]map[string]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
 	defer f.Close()
-
-	if err := utils.ValidateTimestamp(f); err != nil {
-		return nil, err
-	}
 
 	fileType := filepath.Ext(path)
 
@@ -27,7 +22,7 @@ func LoadFile(path string) ([]map[string]string, error) {
 	case ".xlsx":
 		rows, err = ReadXLSX(f, "")
 	default:
-		panic("unsupported file type")
+		panic("file type must be csv or xlsx")
 	}
 
 	log.Printf("loaded rows from %s, length %d\n", path, len(rows))

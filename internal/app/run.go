@@ -2,20 +2,15 @@ package app
 
 import (
 	"ballot-tool/internal/ballot"
+	"ballot-tool/internal/config"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-const (
-	url          = "https://isotc.iso.org/livelink/eb3/part/viewMyBallots.do?method=doVoteRequired&org.apache.struts.taglib.html.CANCEL=true&startIndex=0"
-	cenBallotURL = "https://cen.iso.org/livelink/eb33/part/exportBallotListXLS.do?noreset=true"
-	isoBallotURL = "https://isotc.iso.org/livelink/eb3/part/exportBallotListXLS.do?noreset=true"
-)
-
 func Run(opt bool) error {
-	cfg, err := setConfig()
+	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
 	}
@@ -24,12 +19,16 @@ func Run(opt bool) error {
 		return fmt.Errorf("create output dir: %w", err)
 	}
 
-	ballots, err := getBallots(cfg)
+	isoPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot1)
+	cenPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot2)
+	ballotPaths := []string{isoPath, cenPath}
+	ballots, err := ballot.GetCombinedBallots(ballotPaths)
 	if err != nil {
 		return err
 	}
 
-	roles, err := getVoterRoles(cfg)
+	rolesPath := filepath.Join(cfg.InputPath, cfg.Files.Voters)
+	roles, err := ballot.GetVoterRoles(rolesPath)
 	if err != nil {
 		return err
 	}
@@ -48,7 +47,8 @@ func Run(opt bool) error {
 	}
 
 	if opt {
-		orgRoles, err := getOrgRoles(cfg)
+		orgPath := filepath.Join(cfg.InputPath, cfg.Files.OrgRoles)
+		orgRoles, err := ballot.GetOrgRoles(orgPath)
 		if err != nil {
 			return err
 		}

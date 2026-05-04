@@ -1,18 +1,18 @@
-package app
+package config
 
 import (
-	"ballot-tool/internal/config"
+	"encoding/json"
 	"os"
 	"path/filepath"
 )
 
-func setConfig() (*config.Config, error) {
+func InitConfig() (*Config, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
 
-	cfg, err := config.LoadConfig("config.json")
+	cfg, err := loadConfig("config.json")
 	if err != nil {
 		return nil, err
 	}
@@ -42,4 +42,18 @@ func setConfig() (*config.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func loadConfig(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
 }
