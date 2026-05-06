@@ -3,13 +3,14 @@ package app
 import (
 	"ballot-tool/internal/ballot"
 	"ballot-tool/internal/config"
+	"ballot-tool/internal/standards"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 )
 
-func Run(opt bool) error {
+func RunBallotTool(opt bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
@@ -59,5 +60,17 @@ func Run(opt bool) error {
 		}
 	}
 
+	return nil
+}
+
+func RunStandardsTool(job string, nsOnly bool) error {
+	cfg, err := config.InitConfig()
+	if err != nil {
+		return err
+	}
+	fmt.Println(nsOnly)
+	if err := standards.CountTotalUniqueProducts(cfg.InputPath, job, nsOnly); err != nil {
+		return err
+	}
 	return nil
 }

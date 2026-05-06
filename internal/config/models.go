@@ -3,7 +3,7 @@ package config
 type Config struct {
 	CentralizedVoters []string `json:"centralizedVoters"`
 	OutputPath        string   `json:"outputPath"`
-	InputPath         string   `json:"inputPathSuffix"`
+	InputPath         string   `json:"inputPath"`
 	Files             Files    `json:"files"`
 	Username          string   `json:"username"`
 	Password          string   `json:"password"`
