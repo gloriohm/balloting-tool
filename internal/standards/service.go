@@ -34,6 +34,7 @@ func CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error
 	standards, resultLog := filterByAdoptionType(all, selection, nsOnly)
 
 	filtered := make(map[string]struct{})
+	var includeDupes []Standard
 
 	for _, s := range standards {
 		if !isAllowedLanguage(s.Language, []string{"en", "no", "nb", "nn"}) {
@@ -56,11 +57,13 @@ func CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error
 		if exists {
 			count.Duplicate++
 		}
+		includeDupes = append(includeDupes, s)
 		filtered[s.Reference] = struct{}{}
 	}
 
 	log.Printf("Total in: %d; Total after selection filtration: %d; diff: %d", resultLog.In, resultLog.Out, resultLog.Diff)
 	log.Printf("%d standards in selection\n", len(filtered))
+	log.Printf("%d standards inkludert oversettelser\n", len(includeDupes))
 	log.Printf("total discarded:\nLang: %d\nAddon: %d\nLang code in ref: %d\nDuplicate reference: %d\n", count.Lang, count.Addon, count.LangCode, count.Duplicate)
 
 	if err := WriteResultTXT(pathToFolder, filtered, count); err != nil {
