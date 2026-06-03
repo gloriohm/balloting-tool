@@ -3,6 +3,7 @@ package app
 import (
 	"ballot-tool/internal/ballot"
 	"ballot-tool/internal/config"
+	"ballot-tool/internal/sdimport"
 	"ballot-tool/internal/standards"
 	"fmt"
 	"os"
@@ -72,5 +73,17 @@ func RunStandardsTool(job string, nsOnly bool) error {
 	if err := standards.CountTotalUniqueProducts(cfg.InputPath, job, nsOnly); err != nil {
 		return err
 	}
+	return nil
+}
+
+func RunImportTool(from, to string, dev bool) error {
+	params := sdimport.NewParameters(from, to)
+	client := sdimport.NewClient(dev, params)
+
+	err := client.GetStandards()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
