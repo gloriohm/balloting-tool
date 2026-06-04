@@ -131,13 +131,13 @@ func decodeHTML(in string) (string, error) {
 func (p *Project) ParseClassification(target string) []string {
 	var out []string
 	for _, c := range p.Classifications {
-		switch target {
-		case "SUSTAINABLE_DEVELOPMENT_GOAL":
-			out = append(out, parseSusDevGoal(c.Value))
-		case "ICS":
-			out = append(out, c.Value)
-		default:
-			out = append(out, c.Value)
+		if c.Type == target {
+			switch target {
+			case "SUSTAINABLE_DEVELOPMENT_GOAL":
+				out = append(out, parseSusDevGoal(c.Value))
+			case "ICS":
+				out = append(out, c.Value)
+			}
 		}
 	}
 
