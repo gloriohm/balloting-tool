@@ -64,15 +64,22 @@ func RunBallotTool(opt bool) error {
 	return nil
 }
 
-func RunStandardsTool(job string, nsOnly bool) error {
+func RunStandardsTool(job string, nsOnly, aktualitet bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
 	}
-	fmt.Println(nsOnly)
-	if err := standards.CountTotalUniqueProducts(cfg.InputPath, job, nsOnly); err != nil {
-		return err
+
+	if aktualitet {
+		if err := standards.GenerateAktualitetList(cfg.InputPath); err != nil {
+			return err
+		}
+	} else {
+		if err := standards.CountTotalUniqueProducts(cfg.InputPath, job, nsOnly); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 

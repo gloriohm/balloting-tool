@@ -1,12 +1,16 @@
 package standards
 
 import (
+	"ballot-tool/internal/sdimport"
 	"ballot-tool/internal/utils"
 	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type Counter struct {
@@ -21,6 +25,71 @@ type Log struct {
 	In   int
 	Out  int
 	Diff int
+}
+
+func GenerateAktualitetList(pathToFolder string) error {
+	data, err := utils.LoadTabularDataFromFolder(pathToFolder)
+	if err != nil {
+		return err
+	}
+
+	all := rowToStandard(data)
+	standards, _ := filterByAdoptionType(all, "national", false)
+
+	filtered := make(map[string]Standard)
+	for _, s := range standards {
+		if !divisibleByFive(s.Reference) {
+			log.Printf("[Aktualitet] skipped %s due to not being released five year period\n", s.Reference)
+			continue
+		}
+		if isAddons(s.Reference) {
+			//log.Printf("[Addon] skipped %s due to being an addon\n", s.Reference)
+			continue
+		}
+		if hasLanguageCodeInReference(s.Reference) {
+			//log.Printf("[Lang Code] skipped %s due to language code in reference\n", s.Reference)
+			continue
+		}
+
+		filtered[s.Reference] = s
+	}
+
+	var expanded []StandardExpanded
+	params := sdimport.NewParameters("", "")
+	client := sdimport.NewClient(false, params)
+	for _, s := range filtered {
+		id := "sn:proj:" + s.URN
+		proj, err := client.GetProject(id)
+		if err != nil {
+			log.Printf("failed fetching metadata for %s: %s\n", s.Reference, err)
+			continue
+		}
+
+		standard := projToExpanded(proj)
+
+		expanded = append(expanded, standard)
+	}
+
+	return WriteResultExcel(pathToFolder, expanded)
+}
+
+func projToExpanded(proj sdimport.Project) StandardExpanded {
+	var out StandardExpanded
+	out.Reference = proj.Reference
+	titles := proj.ParseTitles()
+	for _, t := range titles {
+		switch t.Language {
+		case "no":
+			out.TitleNO = t.Value
+		case "en":
+			out.TitleEN = t.Value
+		}
+	}
+	out.Committee = proj.Owner.DisplayName
+	year, _ := getYearFromReference(proj.Reference)
+	out.Year = year
+
+	return out
 }
 
 func CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error {
@@ -132,5 +201,40 @@ func WriteResultTXT(path string, references map[string]struct{}, count Counter) 
 			return err
 		}
 	}
+	return nil
+}
+
+func WriteResultExcel(path string, standards []StandardExpanded) error {
+	f := excelize.NewFile()
+	sheet := "standarder"
+	f.SetSheetName("Sheet1", sheet)
+
+	headers := []string{"Prosjektleder", "Undersøkelsesår", "NS-nummer", "Norsk tittel", "Engelsk tittel", "Komité", "Status komité", "År fastsatt"}
+
+	for col, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(col+1, 1)
+		f.SetCellValue(sheet, cell, h)
+	}
+
+	row := 2
+
+	for _, s := range standards {
+		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "")
+		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), time.Now().Year())
+		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), s.Reference)
+		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), s.TitleNO)
+		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), s.TitleEN)
+		f.SetCellValue(sheet, fmt.Sprintf("F%d", row), s.Committee)
+		f.SetCellValue(sheet, fmt.Sprintf("G%d", row), "")
+		f.SetCellValue(sheet, fmt.Sprintf("H%d", row), s.Year)
+
+		row++
+	}
+
+	filepath := path + "/aktualitetsundersokelsen.xlsx"
+	if err := f.SaveAs(filepath); err != nil {
+		return err
+	}
+
 	return nil
 }

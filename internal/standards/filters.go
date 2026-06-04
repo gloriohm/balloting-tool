@@ -1,9 +1,12 @@
 package standards
 
 import (
+	"log"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 )
 
 var suffixRef = regexp.MustCompile(`:\d{4}/[^/]+:\d{4}$`)
@@ -53,4 +56,29 @@ func hasAllowedPrefix(ref string, allowed []string) bool {
 	}
 
 	return false
+}
+
+func divisibleByFive(ref string) bool {
+	year, err := getYearFromReference(ref)
+	if err != nil {
+		return false
+	}
+	currentYear := time.Now().Year()
+
+	diff := currentYear - year
+	if diff > 0 && diff%5 == 0 {
+		return true
+	}
+
+	return false
+}
+
+func getYearFromReference(ref string) (int, error) {
+	yearString := ref[len(ref)-4:]
+	year, err := strconv.Atoi(yearString)
+	if err != nil {
+		log.Printf("last four characters not a valid year %s", ref)
+		return year, err
+	}
+	return year, nil
 }

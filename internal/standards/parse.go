@@ -13,6 +13,7 @@ func rowToStandard(rows []map[string]string) []Standard {
 			Reference: ref,
 			Language:  row["lang"],
 			Title:     row["title"],
+			URN:       row["id"],
 		})
 	}
 

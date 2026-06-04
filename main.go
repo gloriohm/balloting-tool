@@ -18,6 +18,7 @@ func main() {
 	//urn := flag.String("urn", "snv:proj:1973783", "urn of project to retrieve")
 	from := flag.String("from", "2026-05-27", "publication date range begin")
 	to := flag.String("to", "2026-06-03", "publication date range begin end")
+	aktualitet := flag.Bool("aktualitet", false, "use flag to generate aktualitetsundersøkelse for current year")
 
 	flag.Parse()
 
@@ -32,7 +33,7 @@ func main() {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "standards":
-		if err := app.RunStandardsTool(*job, *nsOnly); err != nil {
+		if err := app.RunStandardsTool(*job, *nsOnly, *aktualitet); err != nil {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "import":
