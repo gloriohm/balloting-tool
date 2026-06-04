@@ -44,7 +44,7 @@ func NewParameters(from, to string) Parameters {
 func NewClient(dev bool, params Parameters) *Client {
 	url, key := setEnv(dev)
 	return &Client{
-		HTTP:      &http.Client{Timeout: 15 * time.Second},
+		HTTP:      &http.Client{Timeout: 30 * time.Second},
 		BaseURL:   url,
 		apiKey:    key,
 		keyHeader: keyHeader,
