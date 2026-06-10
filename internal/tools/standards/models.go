@@ -44,7 +44,12 @@ type StandardCore struct {
 	URN       string
 }
 
-type StandardExpanded struct {
+type StandardFile struct {
+	StandardCore
+	HasFile bool
+}
+
+type AktualitetStandard struct {
 	Reference string
 	TitleNO   string
 	TitleEN   string
@@ -52,14 +57,14 @@ type StandardExpanded struct {
 	Year      int
 }
 
-type CommitteeData struct {
+type AktualitetCommittee struct {
 	ProjectManager  string
 	CommitteeStatus string
 }
 
-type AktualitetData struct {
-	StandardExpanded
-	CommitteeData
+type Aktualitet struct {
+	AktualitetStandard
+	AktualitetCommittee
 }
 
 func (s *Standard) ParsePulicationDetails(pub sdimport.Publication) error {

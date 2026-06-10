@@ -45,7 +45,7 @@ func GenerateAktualitetList(pathToFolder string) error {
 		filtered[s.Reference] = s
 	}
 
-	var expanded []StandardExpanded
+	var aktStandard []AktualitetStandard
 	params := sdimport.NewParameters("", "")
 	client := sdimport.NewClient(false, params)
 	for _, s := range filtered {
@@ -56,16 +56,16 @@ func GenerateAktualitetList(pathToFolder string) error {
 			continue
 		}
 
-		standard := projToExpanded(proj)
+		standard := projToAktualitetStandard(proj)
 
-		expanded = append(expanded, standard)
+		aktStandard = append(aktStandard, standard)
 	}
 
-	return WriteResultExcel(pathToFolder, expanded)
+	return WriteAktualitetExcel(pathToFolder, aktStandard)
 }
 
-func projToExpanded(proj sdimport.Project) StandardExpanded {
-	var out StandardExpanded
+func projToAktualitetStandard(proj sdimport.Project) AktualitetStandard {
+	var out AktualitetStandard
 	out.Reference = proj.Reference
 	titles := proj.ParseTitles()
 	for _, t := range titles {
@@ -255,8 +255,7 @@ func (s *Service) FindStandardsWithXML(path string) error {
 	}
 
 	standards := rowToStandard(data)
-	var hasXML []StandardCore
-	var noXML []StandardCore
+	var out []StandardFile
 	for _, std := range standards {
 		urn := fmt.Sprintf("sn:proj:%s", std.URN)
 		pub, err := s.sdimport.GetPublicationByProject(urn, "PUBLISHED")
@@ -265,18 +264,17 @@ func (s *Service) FindStandardsWithXML(path string) error {
 			continue
 		}
 		_, err = pub.GetReleaseItem("STANDARD", "XML")
+		withFile := StandardFile{StandardCore: std}
 		if err == nil {
-			hasXML = append(hasXML, std)
+			withFile.HasFile = true
 		} else {
-			noXML = append(noXML, std)
+			withFile.HasFile = false
 		}
+		out = append(out, withFile)
 	}
 
-	if err := WriteOutJSON(hasXML, "har_xml"); err != nil {
-		return fmt.Errorf("error marhsalling hasXML: %w\n", err)
-	}
-	if err := WriteOutJSON(noXML, "mangler_xml"); err != nil {
-		return fmt.Errorf("error marhsalling noXML: %w\n", err)
+	if err := WriteHasFileExcel(path, out); err != nil {
+		return err
 	}
 
 	return nil
