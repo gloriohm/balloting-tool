@@ -1,7 +1,7 @@
 package table
 
 import (
-	"ballot-tool/internal/utils"
+	"ballot-tool/internal/utils/normalization"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,8 +13,8 @@ import (
 
 func ExportExcel(table ParsedTable) error {
 	f := excelize.NewFile()
-	sheet := utils.StripLabel(table.Label, "Table")
-	sheet = utils.SanitizeFilename(sheet)
+	sheet := normalization.StripLabel(table.Label, "Table")
+	sheet = normalization.SanitizeFilename(sheet)
 	f.SetSheetName("Sheet1", sheet)
 
 	for i, row := range table.Rows {

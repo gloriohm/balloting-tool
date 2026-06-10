@@ -1,5 +1,6 @@
 files/
-config.json
+*.json
+*.log
 *.exe
+*.zip
 .env
-result.json

@@ -1,7 +1,8 @@
 package ballot
 
 import (
-	"ballot-tool/internal/utils"
+	"ballot-tool/internal/utils/normalization"
+
 	"fmt"
 	"log"
 	"sort"
@@ -68,12 +69,12 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotWithRole) error
 }
 
 func filterRowsByVoter(rows []BallotWithRole, voters []string) [][]BallotWithRole {
-	voterIdx, _ := utils.IndexStrings(voters, 1)
+	voterIdx, _ := normalization.IndexStrings(voters, 1)
 
 	out := make([][]BallotWithRole, len(voters)+1)
 
 	for _, row := range rows {
-		email := utils.ToLowerCase(row.Role.Email)
+		email := normalization.ToLowerCase(row.Role.Email)
 
 		if i, ok := voterIdx[email]; ok {
 			out[i] = append(out[i], row)

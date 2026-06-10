@@ -1,18 +1,5 @@
 package sdimport
 
-type Standard struct {
-	Reference       string
-	Title           []Title
-	Abstract        string
-	ICS             []string
-	SusDevGoals     []string
-	Edition         int
-	Pages           int
-	Developer       []string
-	Owner           []string
-	PublicationDate string
-}
-
 type Project struct {
 	Reference        string            `json:"reference"`
 	Title            []Title           `json:"title"`
@@ -29,6 +16,7 @@ type Publication struct {
 	Reference       string        `json:"reference"`
 	ProjectID       URN           `json:"project"`
 	PublicationDate string        `json:"publicationDate"`
+	Status          string        `json:"status"`
 	ReleaseItems    []ReleaseItem `json:"releaseItems"`
 }
 
@@ -55,10 +43,11 @@ type CommitteeResponse struct {
 }
 
 type ReleaseItem struct {
-	Type     string   `json:"type"`
-	Format   string   `json:"format"`
-	Pages    int      `json:"pages"`
-	Language []string `json:"contentLanguage"`
+	Type       string     `json:"type"`
+	Format     string     `json:"format"`
+	Pages      int        `json:"pages"`
+	Language   []string   `json:"contentLanguage"`
+	ContentRef ContentRef `json:"contentRef"`
 }
 
 type Response struct {
@@ -85,6 +74,14 @@ type URN struct {
 type Committee struct {
 	NSB       string
 	Reference string
+}
+
+type ContentRef struct {
+	URL            string `json:"url"`
+	MimeType       string `json:"mimeType"`
+	FileName       string `json:"fileName"`
+	FileExtenstion string `json:"fileExtension"`
+	Checksum       string `json:"checksum"`
 }
 
 var sustainableDevelopmentGoals = map[int]string{

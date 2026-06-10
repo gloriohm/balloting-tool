@@ -1,7 +1,7 @@
 package ballot
 
 import (
-	"ballot-tool/internal/utils"
+	"ballot-tool/internal/utils/normalization"
 	"fmt"
 	"log"
 	"strings"
@@ -50,7 +50,7 @@ func parseBallots(rows []map[string]string) ([]Ballot, []error) {
 		if close == "" {
 			continue
 		}
-		closeTime, err := utils.ParseDate(close)
+		closeTime, err := normalization.ParseDate(close)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("row %d: closing date not formatted as ISO date", i+1))
 			continue

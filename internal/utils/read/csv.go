@@ -1,6 +1,7 @@
-package utils
+package read
 
 import (
+	"ballot-tool/internal/utils/normalization"
 	"encoding/csv"
 	"io"
 	"strings"
@@ -22,7 +23,7 @@ func ReadCSV(r io.Reader) ([]map[string]string, error) {
 	headers := make([]string, len(rawHeaders))
 
 	for i, h := range rawHeaders {
-		headers[i] = NormalizeString(h)
+		headers[i] = normalization.NormalizeString(h)
 	}
 
 	var rows []map[string]string

@@ -1,34 +1,25 @@
 package standards
 
 import (
-	"ballot-tool/internal/sdimport"
-	"ballot-tool/internal/utils"
+	"ballot-tool/internal/api/sdimport"
+	"ballot-tool/internal/utils/read"
 	"bufio"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/xuri/excelize/v2"
 )
 
-type Counter struct {
-	Lang      int
-	Addon     int
-	LangCode  int
-	Selection int
-	Duplicate int
+type Service struct {
+	sdimport *sdimport.Client
 }
 
-type Log struct {
-	In   int
-	Out  int
-	Diff int
+func NewService(sdimport *sdimport.Client) *Service {
+	return &Service{sdimport: sdimport}
 }
 
 func GenerateAktualitetList(pathToFolder string) error {
-	data, err := utils.LoadTabularDataFromFolder(pathToFolder)
+	data, err := read.LoadTabularDataFromFolder(pathToFolder)
 	if err != nil {
 		return err
 	}
@@ -36,7 +27,7 @@ func GenerateAktualitetList(pathToFolder string) error {
 	all := rowToStandard(data)
 	standards, _ := filterByAdoptionType(all, "national", false)
 
-	filtered := make(map[string]Standard)
+	filtered := make(map[string]StandardCore)
 	for _, s := range standards {
 		if !divisibleByFive(s.Reference) {
 			log.Printf("[Aktualitet] skipped %s due to not being released five year period\n", s.Reference)
@@ -93,7 +84,7 @@ func projToExpanded(proj sdimport.Project) StandardExpanded {
 }
 
 func CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error {
-	data, err := utils.LoadTabularDataFromFolder(pathToFolder)
+	data, err := read.LoadTabularDataFromFolder(pathToFolder)
 	if err != nil {
 		return err
 	}
@@ -103,7 +94,7 @@ func CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error
 	standards, resultLog := filterByAdoptionType(all, selection, nsOnly)
 
 	filtered := make(map[string]struct{})
-	var includeDupes []Standard
+	var includeDupes []StandardCore
 
 	for _, s := range standards {
 		if !isAllowedLanguage(s.Language, []string{"en", "no", "nb", "nn"}) {
@@ -141,8 +132,8 @@ func CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error
 	return nil
 }
 
-func filterByAdoptionType(standards []Standard, choice string, nsOnly bool) ([]Standard, Log) {
-	var filtered []Standard
+func filterByAdoptionType(standards []StandardCore, choice string, nsOnly bool) ([]StandardCore, Log) {
+	var filtered []StandardCore
 	var allowedPrefixes []string
 	switch choice {
 	case "national":
@@ -204,36 +195,118 @@ func WriteResultTXT(path string, references map[string]struct{}, count Counter) 
 	return nil
 }
 
-func WriteResultExcel(path string, standards []StandardExpanded) error {
-	f := excelize.NewFile()
-	sheet := "standarder"
-	f.SetSheetName("Sheet1", sheet)
-
-	headers := []string{"Prosjektleder", "Undersøkelsesår", "NS-nummer", "Norsk tittel", "Engelsk tittel", "Komité", "Status komité", "År fastsatt"}
-
-	for col, h := range headers {
-		cell, _ := excelize.CoordinatesToCellName(col+1, 1)
-		f.SetCellValue(sheet, cell, h)
-	}
-
-	row := 2
-
-	for _, s := range standards {
-		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), "")
-		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), time.Now().Year())
-		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), s.Reference)
-		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), s.TitleNO)
-		f.SetCellValue(sheet, fmt.Sprintf("E%d", row), s.TitleEN)
-		f.SetCellValue(sheet, fmt.Sprintf("F%d", row), s.Committee)
-		f.SetCellValue(sheet, fmt.Sprintf("G%d", row), "")
-		f.SetCellValue(sheet, fmt.Sprintf("H%d", row), s.Year)
-
-		row++
-	}
-
-	filepath := path + "/aktualitetsundersokelsen.xlsx"
-	if err := f.SaveAs(filepath); err != nil {
+func (s *Service) GetStandards() error {
+	var standards []Standard
+	pubs, err := s.sdimport.GetPublications()
+	if err != nil {
 		return err
+	}
+
+	for _, p := range pubs {
+		standard, err := s.CreateStandardFromPublication(p)
+		if err != nil {
+			s.sdimport.Logger.Info(fmt.Sprintf("%s: %s", p.Reference, err))
+			continue
+		}
+		standards = append(standards, standard)
+	}
+
+	return WriteOutJSON(standards, "get_standard_result")
+}
+
+func (s *Service) CreateStandardFromPublication(pub sdimport.Publication) (Standard, error) {
+	var standard Standard
+
+	urn := pub.ProjectID.URN
+	nationalProject, err := s.sdimport.GetProject(urn)
+	if err != nil {
+		return standard, fmt.Errorf("failed to get project for urn %s: %w", urn, err)
+	}
+
+	standard.ParsePulicationDetails(pub)
+	standard.ParseNationalProjectDetails(nationalProject)
+
+	//terrible code, refactor
+	parentURN := nationalProject.GetRelationURN("ADOPTED_FROM")
+	if parentURN != "" {
+		parent, err := s.sdimport.GetProject(parentURN)
+		if err != nil {
+			return standard, fmt.Errorf("failed to get parent project with urn %s: %w", urn, err)
+		}
+		standard.ParseInternationalProjectDetails(parent)
+
+		/* grandparentURN := parent.GetRelationURN("VIENNA_AGREEMENT")
+		if grandparentURN != "" {
+			grandparent, err := s.sdimport.GetProject(grandparentURN)
+			if err != nil {
+				return standard, fmt.Errorf("failed to get grandparent project with urn %s: %w", urn, err)
+			}
+			standard.ParseCommittee(grandparent)
+		} */
+	}
+
+	return standard, nil
+}
+
+func (s *Service) FindStandardsWithXML(path string) error {
+	data, err := read.LoadTabularDataFromFile(fmt.Sprintf("%s/full.csv", path))
+	if err != nil {
+		return fmt.Errorf("error loading data at path %s: %w", path, err)
+	}
+
+	standards := rowToStandard(data)
+	var hasXML []StandardCore
+	var noXML []StandardCore
+	for _, std := range standards {
+		urn := fmt.Sprintf("sn:proj:%s", std.URN)
+		pub, err := s.sdimport.GetPublicationByProject(urn, "PUBLISHED")
+		if err != nil {
+			log.Printf("could not get publication for %s: %s\n", urn, err)
+			continue
+		}
+		_, err = pub.GetReleaseItem("STANDARD", "XML")
+		if err == nil {
+			hasXML = append(hasXML, std)
+		} else {
+			noXML = append(noXML, std)
+		}
+	}
+
+	if err := WriteOutJSON(hasXML, "har_xml"); err != nil {
+		return fmt.Errorf("error marhsalling hasXML: %w\n", err)
+	}
+	if err := WriteOutJSON(noXML, "mangler_xml"); err != nil {
+		return fmt.Errorf("error marhsalling noXML: %w\n", err)
+	}
+
+	return nil
+}
+
+func (s *Service) DownloadFiles(in, out string) error {
+	data, err := read.LoadTabularDataFromFile(fmt.Sprintf("%s/test.csv", in))
+	if err != nil {
+		return fmt.Errorf("error loading data at path %s: %w", in, err)
+	}
+
+	standards := rowToStandard(data)
+
+	for _, std := range standards {
+		urn := fmt.Sprintf("sn:proj:%s", std.URN)
+		pub, err := s.sdimport.GetPublicationByProject(urn, "PUBLISHED")
+		if err != nil {
+			log.Printf("could not get publication for %s: %s\n", urn, err)
+			continue
+		}
+		rel, err := pub.GetReleaseItem("STANDARD", "XML")
+		if err != nil {
+			log.Printf("could not get release item for %s: %s\n", pub.Reference, err)
+			continue
+		}
+
+		if err := s.sdimport.GetFile(rel.ContentRef, out); err != nil {
+			log.Printf("could not save file %s: %s\n", rel.ContentRef.FileName, err)
+			continue
+		}
 	}
 
 	return nil

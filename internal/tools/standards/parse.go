@@ -5,11 +5,11 @@ import (
 	"strings"
 )
 
-func rowToStandard(rows []map[string]string) []Standard {
-	out := make([]Standard, 0, len(rows))
+func rowToStandard(rows []map[string]string) []StandardCore {
+	out := make([]StandardCore, 0, len(rows))
 	for _, row := range rows {
 		ref := normalizeReference(row["reference"])
-		out = append(out, Standard{
+		out = append(out, StandardCore{
 			Reference: ref,
 			Language:  row["lang"],
 			Title:     row["title"],

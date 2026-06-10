@@ -1,60 +1,29 @@
 package sdimport
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 
 	"golang.org/x/net/html"
 )
 
-func (s *Standard) ParsePulicationDetails(pub Publication) error {
-	s.PublicationDate = pub.PublicationDate
-
-	pageCount, err := pub.GetPageNumber()
-	if err != nil {
-		log.Printf("could not get pages for publication %s\n", pub.Reference)
-	}
-	s.Pages = pageCount
-
-	return nil
+func (p *Project) ParseEdition() (int, error) {
+	return strconv.Atoi(p.Edition)
 }
 
-func (s *Standard) ParseNationalProjectDetails(proj Project) error {
-	s.Reference = proj.Reference
-	s.Title = proj.ParseTitles()
-	abstract := proj.ParseAbstract("en")
-	if abstract == "" {
-		abstract = proj.ParseAbstract("no")
-	}
-	s.Abstract = abstract
-	s.ICS = proj.ParseClassification("ICS")
-	s.ParseCommittee(proj)
-
-	return nil
-}
-
-func (s *Standard) ParseInternationalProjectDetails(proj Project) {
-	edition, err := strconv.Atoi(proj.Edition)
-	if err != nil {
-		log.Printf("edition not a number: got %s", proj.Edition)
-		edition = 1
-	}
-	s.Edition = edition
-	if s.Abstract == "" {
-		s.Abstract = proj.ParseAbstract("en")
-	}
-
-	s.SusDevGoals = proj.ParseClassification("SUSTAINABLE_DEVELOPMENT_GOAL")
-}
-
-func (s *Standard) ParseCommittee(proj Project) {
-	if len(proj.Owner.DisplayName) > 0 {
-		s.Owner = append(s.Owner, proj.Owner.DisplayName)
-	}
-	if len(proj.Developer.DisplayName) > 0 {
-		s.Developer = append(s.Developer, proj.Developer.DisplayName)
+func (p *Project) ParseCommittee(level string) string {
+	switch level {
+	case "owner":
+		return p.Owner.DisplayName
+	case "developer":
+		return p.Developer.DisplayName
+	default:
+		return ""
 	}
 }
 
@@ -162,7 +131,7 @@ func parseSusDevGoal(value string) string {
 func (p *Project) GetRelationURN(relationType string) string {
 	for _, r := range p.ProjectRelations {
 		if r.Type == relationType {
-			if relationType == "ADOPTED_FROM" {
+			if relationType == "ADOPTED_FROM" || relationType == "VIENNA_AGREEMENT" {
 				return r.ExternalProject.ProjectID
 			} else {
 				return r.URN
@@ -171,4 +140,37 @@ func (p *Project) GetRelationURN(relationType string) string {
 	}
 
 	return ""
+}
+
+func (p *Publication) GetReleaseItem(itemType, itemFormat string) (ReleaseItem, error) {
+	for _, r := range p.ReleaseItems {
+		if r.Type == itemType && r.Format == itemFormat {
+			return r, nil
+		}
+	}
+
+	return ReleaseItem{}, fmt.Errorf("found no items of type %s and format %s on publication %s", itemType, itemFormat, p.Reference)
+}
+
+func dumpResponse(resp *http.Response) (Response, error) {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return Response{}, err
+	}
+
+	var response Response
+	if err := json.Unmarshal(body, &response); err != nil {
+		return Response{}, err
+	}
+
+	return response, nil
+}
+
+func (p *Project) getPublicationURNs() []string {
+	var pubURNs []string
+	for _, p := range p.PubLink {
+		pubURNs = append(pubURNs, p.URN)
+	}
+
+	return pubURNs
 }

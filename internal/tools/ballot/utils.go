@@ -1,6 +1,6 @@
 package ballot
 
-import "ballot-tool/internal/utils"
+import "ballot-tool/internal/utils/normalization"
 
 var rolesHeaderAliases = map[string]string{
 	"account_email":       "email",
@@ -20,7 +20,7 @@ var ballotHeaderAliases = map[string]string{
 }
 
 func isVoterRole(raw string) bool {
-	switch utils.NormalizeString(raw) {
+	switch normalization.NormalizeString(raw) {
 	case "voter", "cen_voter", "obligated_voter":
 		return true
 	default:
@@ -29,7 +29,7 @@ func isVoterRole(raw string) bool {
 }
 
 func isMemberStatus(raw string) bool {
-	switch utils.NormalizeString(raw) {
+	switch normalization.NormalizeString(raw) {
 	case "p_member", "o_member":
 		return true
 	default:

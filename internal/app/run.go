@@ -1,10 +1,10 @@
 package app
 
 import (
-	"ballot-tool/internal/ballot"
-	"ballot-tool/internal/config"
-	"ballot-tool/internal/sdimport"
-	"ballot-tool/internal/standards"
+	"ballot-tool/internal/api/sdimport"
+	"ballot-tool/internal/tools/ballot"
+	"ballot-tool/internal/tools/standards"
+	"ballot-tool/internal/utils/config"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,32 +64,36 @@ func RunBallotTool(opt bool) error {
 	return nil
 }
 
-func RunStandardsTool(job string, nsOnly, aktualitet bool) error {
+func RunStandardsTool(job, from, to string, nsOnly, aktualitet, dev bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
 	}
+	params := sdimport.NewParameters(from, to)
+	client := sdimport.NewClient(dev, params)
+	stdSvc := standards.NewService(client)
 
-	if aktualitet {
-		if err := standards.GenerateAktualitetList(cfg.InputPath); err != nil {
-			return err
-		}
-	} else {
+	switch job {
+	case "count":
 		if err := standards.CountTotalUniqueProducts(cfg.InputPath, job, nsOnly); err != nil {
 			return err
 		}
-	}
-
-	return nil
-}
-
-func RunImportTool(from, to string, dev bool) error {
-	params := sdimport.NewParameters(from, to)
-	client := sdimport.NewClient(dev, params)
-
-	err := client.GetStandards()
-	if err != nil {
-		return err
+	case "fetch":
+		if err := stdSvc.GetStandards(); err != nil {
+			return err
+		}
+	case "filter":
+		if err := standards.GenerateAktualitetList(cfg.InputPath); err != nil {
+			return err
+		}
+	case "xml":
+		if err := stdSvc.FindStandardsWithXML(cfg.InputPath); err != nil {
+			return err
+		}
+	case "download":
+		if err := stdSvc.DownloadFiles(cfg.InputPath, cfg.OutputPath); err != nil {
+			return err
+		}
 	}
 
 	return nil

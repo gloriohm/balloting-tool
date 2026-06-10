@@ -1,12 +1,14 @@
 package sdimport
 
 import (
-	"encoding/json"
+	"ballot-tool/internal/utils/logging"
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -19,36 +21,19 @@ type Client struct {
 	apiKey    string
 	keyHeader string
 	Params    Parameters
-}
-
-type Parameters struct {
-	Vendor              string
-	PageSize            int
-	FromDate            string
-	ToDate              string
-	LastChangeTimestamp string
-	Originator          string
-}
-
-func NewParameters(from, to string) Parameters {
-	return Parameters{
-		Vendor:              "sarepta",
-		PageSize:            25,
-		FromDate:            from,
-		ToDate:              to,
-		LastChangeTimestamp: "2023-01-01T00:00:00",
-		Originator:          "SN",
-	}
+	Logger    *slog.Logger
 }
 
 func NewClient(dev bool, params Parameters) *Client {
 	url, key := setEnv(dev)
+	file, _ := logging.NewFile("errors.log")
 	return &Client{
 		HTTP:      &http.Client{Timeout: 30 * time.Second},
 		BaseURL:   url,
 		apiKey:    key,
 		keyHeader: keyHeader,
 		Params:    params,
+		Logger:    slog.New(slog.NewTextHandler(file, nil)),
 	}
 }
 
@@ -94,7 +79,7 @@ func (c *Client) GetPublication(urn string) (Publication, error) {
 	}
 
 	if len(respDump.Publication) == 0 {
-		return Publication{}, fmt.Errorf("no projects in response")
+		return Publication{}, fmt.Errorf("no publications in response")
 	}
 	Publication := respDump.Publication[0]
 
@@ -114,9 +99,14 @@ func (c *Client) GetMultipleWrapper(pubType string) ([]Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("total records not a number: %w", err)
 	}
-	pages := totalRecords / c.Params.PageSize //pages are zero indexed
 
-	for page := 0; page <= pages; page++ {
+	if totalRecords == 0 {
+		return nil, nil
+	}
+
+	lastPage := (totalRecords - 1) / c.Params.PageSize
+
+	for page := 0; page <= lastPage; page++ {
 		var resp Response
 
 		if page == 0 {
@@ -125,7 +115,7 @@ func (c *Client) GetMultipleWrapper(pubType string) ([]Response, error) {
 				return nil, fmt.Errorf("error dumping response for page %d: %w", page, err)
 			}
 		} else {
-			path := c.Params.buildRequestString("projects", page)
+			path := c.Params.buildRequestString(pubType, page)
 			next, err := c.getWrapper(path)
 			if err != nil {
 				return nil, fmt.Errorf("error getting next response for page %d: %w", page, err)
@@ -185,20 +175,66 @@ func (c *Client) getWrapper(endpoint string) (*http.Response, error) {
 	return c.HTTP.Do(req)
 }
 
-func (p *Parameters) buildRequestString(pubType string, page int) string {
-	return fmt.Sprintf("/%s/%s/%s/%d/%d?publicationDateFrom=%s&publicationDateTo=%s&originator=%s", pubType, p.Vendor, p.LastChangeTimestamp, page, p.PageSize, p.FromDate, p.ToDate, p.Originator)
+func (c *Client) GetPublicationByProject(urn string, status string) (Publication, error) {
+	proj, err := c.GetProject(urn)
+	if err != nil {
+		return Publication{}, fmt.Errorf("could not get project by %s", urn)
+	}
+
+	pubs := proj.getPublicationURNs()
+	if len(pubs) == 0 {
+		return Publication{}, fmt.Errorf("project %s has no publications", urn)
+	}
+
+	for _, p := range pubs {
+		pub, err := c.GetPublication(p)
+		if err != nil {
+			log.Printf("failed to get publication with urn %s", p)
+			c.Logger.Info(fmt.Sprintf("%s: %s", p, err))
+			continue
+		}
+
+		if pub.Status == status {
+			return pub, nil
+		}
+	}
+
+	return Publication{}, fmt.Errorf("could not get publication with status %s for project %s", status, urn)
 }
 
-func dumpResponse(resp *http.Response) (Response, error) {
-	body, err := io.ReadAll(resp.Body)
+func (c *Client) GetFile(ref ContentRef, dir string) error {
+	url := c.BaseURL + ref.URL
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return Response{}, err
+		return err
+	}
+	log.Println("requesting ", url)
+
+	req.Header.Set("User-Agent", "SN-Utils")
+	req.Header.Set(c.keyHeader, c.apiKey)
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return err
 	}
 
-	var response Response
-	if err := json.Unmarshal(body, &response); err != nil {
-		return Response{}, err
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download failed: %s", resp.Status)
 	}
 
-	return response, nil
+	path := filepath.Join(dir, ref.FileName)
+
+	out, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		return err
+	}
+
+	return nil
 }

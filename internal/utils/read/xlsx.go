@@ -1,6 +1,7 @@
-package utils
+package read
 
 import (
+	"ballot-tool/internal/utils/normalization"
 	"fmt"
 	"io"
 	"strings"
@@ -35,7 +36,7 @@ func ReadXLSX(r io.Reader, sheetName string) ([]map[string]string, error) {
 	headers := make([]string, len(rawHeaders))
 
 	for i, h := range rawHeaders {
-		headers[i] = NormalizeString(h)
+		headers[i] = normalization.NormalizeString(h)
 	}
 
 	rows := make([]map[string]string, 0, max(0, len(allRows)-1))

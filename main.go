@@ -33,17 +33,9 @@ func main() {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "standards":
-		if err := app.RunStandardsTool(*job, *nsOnly, *aktualitet); err != nil {
+		if err := app.RunStandardsTool(*job, *from, *to, *nsOnly, *aktualitet, *dev); err != nil {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
-	case "import":
-		if err := app.RunImportTool(*from, *to, *dev); err != nil {
-			log.Fatalf("noe gikk galt: %s", err)
-		}
-	/* case "table":
-	if err := app.RunTableTool(); err != nil {
-		log.Fatalf("noe gikk galt: %s", err)
-	} */
 	default:
 		log.Fatalf("unknown tool: %s\n", *tool)
 	}

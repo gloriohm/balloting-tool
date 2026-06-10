@@ -1,6 +1,6 @@
 package table
 
-import "ballot-tool/internal/utils"
+import "ballot-tool/internal/utils/normalization"
 
 type TableWrap struct {
 	Title string `xml:"caption>title"`
@@ -51,7 +51,7 @@ type ParsedTable struct {
 
 func (tw TableWrap) toParsedTable() ParsedTable {
 	out := ParsedTable{
-		Title:      utils.NormalizeSpace(tw.Title),
+		Title:      normalization.NormalizeSpace(tw.Title),
 		HeaderRows: len(tw.Table.TableHead.Rows),
 		Label:      tw.Label,
 	}

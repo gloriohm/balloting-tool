@@ -1,7 +1,7 @@
 package ballot
 
 import (
-	"ballot-tool/internal/utils"
+	"ballot-tool/internal/utils/read"
 	"bufio"
 	"fmt"
 	"log"
@@ -11,7 +11,7 @@ import (
 )
 
 func GetBallots(path string) ([]Ballot, error) {
-	rawRows, err := utils.LoadTabularDataFromFile(path)
+	rawRows, err := read.LoadTabularDataFromFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func GetBallots(path string) ([]Ballot, error) {
 }
 
 func GetVoterRoles(path string) ([]Role, error) {
-	rawRows, err := utils.LoadTabularDataFromFile(path)
+	rawRows, err := read.LoadTabularDataFromFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +39,7 @@ func GetVoterRoles(path string) ([]Role, error) {
 }
 
 func GetOrgRoles(path string) ([]Committee, error) {
-	orgRows, err := utils.LoadTabularDataFromFile(path)
+	orgRows, err := read.LoadTabularDataFromFile(path)
 	if err != nil {
 		return nil, err
 	}
