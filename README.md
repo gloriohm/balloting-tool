@@ -8,13 +8,13 @@ SN-utils har i dag tre forskjellige verktøy:
 
 For å bruke noe annet enn ballot-verktøyet, må man kjøre programmet fra en terminal (eks. PowerShell) og spesifisere verktøy med et såkalt flagg. Verktøy velges med flagget "-tool" etterfulgt av navnet på ønsket verktøy.
 
-`./sn-utils.exe -tool standards` vil for eksempel kjøre standard-verktøyet med default innstillinger.
+`./sn-utils.exe -tool standards` vil for eksempel kjøre standard-verktøyet med default innstillinger. Denne jobben kan også kjøres ved å dobbelklikke .exe-filen.
 ### Ballots
 Om ikke noe blir spesifisert, forsøker programmet å kjøre ballots. Man kan også eksplisitt påkalle det med `./sn-utils.exe -tool ballots`.
 
 Ballots-verktøyet krever to lister med ballots (en for CEN, en for ISO) og en liste over roller i input-mappen. Programmet vil samle de to listene med ballots til én liste og forsøke og matche dem med de som har rollen Voter og CEN Voter i rollelisten. Programmet bruker referansen på komité for å knytte ballot til Voter.
 
-Hvis programmet har kjørt vellykket, vil den generere en Excel-fil med navn utestående_avstemninger-yyyy-mm-dd (der år-måned-år er dagens dato) i output-mappen. I tillegg vil den generere en fil som heter missing.txt som lister opp alle ballots der den ikke klarte å matche ballot med Voter. Om rollelisten som ble brukt til input er komplett og up-to-date, er dette et tegn på at komiteen der balloten er opprettet mangler Voter fra SN. Dersom missing.txt ender opp med å være veldig lang, er dette et tegn på at input-dataen ikke er korrekt formatert eller ufullstendig.
+Hvis programmet har kjørt vellykket, vil den generere en Excel-fil med navn utestående_avstemninger-yyyy-mm-dd (der år-måned-dag er dagens dato) i output-mappen. I tillegg vil den generere en fil som heter missing.txt som lister opp alle ballots der den ikke klarte å matche ballot med Voter. Om rollelisten som ble brukt til input er komplett og up-to-date, er dette et tegn på at komiteen der balloten er opprettet mangler Voter fra SN. Dersom missing.txt ender opp med å være veldig lang, er dette et tegn på at input-dataen ikke er korrekt formatert eller ufullstendig.
 #### Centralized Voters
 Centralized Voters må spesifiseres i config.json (se under for mer informasjon). Dette kan være en eller flere e-postadresser. Den kan også være tom.
 
