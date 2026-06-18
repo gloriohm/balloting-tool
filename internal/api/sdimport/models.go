@@ -103,3 +103,25 @@ var sustainableDevelopmentGoals = map[int]string{
 	16: "16: Peace, Justice and Strong Institutions",
 	17: "17: Partnerships for the Goals",
 }
+
+type ReleaseItemType string
+type ReleaseItemFormat string
+type PublicationStatus string
+
+const (
+	ReleaseItemTypeStandard ReleaseItemType = "STANDARD"
+	ReleaseItemTypeSource   ReleaseItemType = "SOURCE_FILE"
+	ReleaseItemTypeOther    ReleaseItemType = "OTHER"
+)
+
+const (
+	ReleaseItemFormatXML  ReleaseItemFormat = "XML"
+	ReleaseItemFormatPDF  ReleaseItemFormat = "PDF"
+	ReleaseItemFormatWord ReleaseItemFormat = "WORD"
+	ReleaseItemFormatAny  ReleaseItemFormat = "ANY"
+)
+
+const (
+	PubStatusPublished PublicationStatus = "PUBLISHED"
+	PubStatusDraft     PublicationStatus = "DRAFT"
+)

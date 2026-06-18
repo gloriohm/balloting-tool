@@ -1,9 +1,11 @@
 package standards
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/xuri/excelize/v2"
@@ -82,4 +84,26 @@ func WriteOutJSON(in any, filename string) error {
 	}
 
 	return os.WriteFile(fmt.Sprintf("%s.json", filename), data, 0644)
+}
+
+func WriteResultTXT(path string, references map[string]struct{}, count Counter) error {
+	out := filepath.Join(path, "result.txt")
+	f, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := bufio.NewWriter(f)
+	defer w.Flush()
+
+	_, err = fmt.Fprintf(w, "total discarded:\nLang: %d\nAddon: %d\nLang code in ref: %d\nDuplicate reference: %d\n", count.Lang, count.Addon, count.LangCode, count.Duplicate)
+
+	for key := range references {
+		_, err := fmt.Fprintf(w, "%s\n", key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -82,3 +82,72 @@ func getYearFromReference(ref string) (int, error) {
 	}
 	return year, nil
 }
+
+func filterByAdoptionType(standards []StandardCore, choice string, nsOnly bool) ([]StandardCore, Log) {
+	var filtered []StandardCore
+	var allowedPrefixes []string
+	switch choice {
+	case "national":
+		if nsOnly {
+			allowedPrefixes = norskStandardNational
+		} else {
+			allowedPrefixes = allPureNationalPrefixes
+		}
+	case "adoption":
+		if nsOnly {
+			allowedPrefixes = norskStandardAdoption
+		} else {
+			allowedPrefixes = allAdoptionPrefixes
+		}
+	case "norsok":
+		allowedPrefixes = norsokPrefix
+	case "all":
+		if nsOnly {
+			allowedPrefixes = allNorskStandardPrefixes
+		} else {
+			return standards, Log{In: len(standards), Out: len(standards), Diff: 0}
+		}
+	default:
+		return standards, Log{In: len(standards), Out: len(standards), Diff: 0}
+	}
+
+	for _, s := range standards {
+		if hasAllowedPrefix(s.Reference, allowedPrefixes) {
+			filtered = append(filtered, s)
+		}
+	}
+
+	log.Println(allowedPrefixes)
+
+	resultLog := Log{In: len(standards), Out: len(filtered), Diff: len(standards) - len(filtered)}
+
+	return filtered, resultLog
+}
+
+func createDownloadJob(job string) []Target {
+	var targets []Target
+	switch job {
+	case "all":
+		targets = append(targets, pdfTarget())
+		targets = append(targets, xmlTarget())
+		targets = append(targets, wordTarget())
+		targets = append(targets, anyTarget())
+	case "source":
+		targets = append(targets, xmlTarget())
+		targets = append(targets, wordTarget())
+	case "xml":
+		targets = append(targets, xmlTarget())
+	case "word":
+		targets = append(targets, wordTarget())
+	case "pdf":
+		targets = append(targets, pdfTarget())
+	case "other":
+		targets = append(targets, anyTarget())
+	case "pdfsource":
+		targets = append(targets, xmlTarget())
+		targets = append(targets, wordTarget())
+		targets = append(targets, pdfTarget())
+	}
+
+	return targets
+}

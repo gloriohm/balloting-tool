@@ -175,7 +175,15 @@ func (c *Client) getWrapper(endpoint string) (*http.Response, error) {
 	return c.HTTP.Do(req)
 }
 
-func (c *Client) GetPublicationByProject(urn string, status string) (Publication, error) {
+func (c *Client) GetPublicationByProject(urn string, pubStatus string) (Publication, error) {
+	status := make(map[string]struct{})
+	switch pubStatus {
+	case "published", "withdrawn":
+		status["PUBLISHED"] = struct{}{}
+		status["WITHDRAWN"] = struct{}{}
+	case "draft":
+		status["DRAFT"] = struct{}{}
+	}
 	proj, err := c.GetProject(urn)
 	if err != nil {
 		return Publication{}, fmt.Errorf("could not get project by %s", urn)
@@ -194,7 +202,7 @@ func (c *Client) GetPublicationByProject(urn string, status string) (Publication
 			continue
 		}
 
-		if pub.Status == status {
+		if _, ok := status[pub.Status]; ok {
 			return pub, nil
 		}
 	}

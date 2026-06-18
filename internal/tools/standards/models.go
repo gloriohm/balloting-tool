@@ -67,6 +67,11 @@ type Aktualitet struct {
 	AktualitetCommittee
 }
 
+type Target struct {
+	itemType   sdimport.ReleaseItemType
+	itemFormat sdimport.ReleaseItemFormat
+}
+
 func (s *Standard) ParsePulicationDetails(pub sdimport.Publication) error {
 	s.PublicationDate = pub.PublicationDate
 

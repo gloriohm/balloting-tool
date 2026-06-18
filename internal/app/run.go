@@ -64,18 +64,18 @@ func RunBallotTool(opt bool) error {
 	return nil
 }
 
-func RunStandardsTool(job, from, to string, nsOnly, aktualitet, dev bool) error {
+func RunStandardsTool(job, from, to, filename, opts string, nsOnly, aktualitet, dev bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
 	}
 	params := sdimport.NewParameters(from, to)
 	client := sdimport.NewClient(dev, params)
-	stdSvc := standards.NewService(client)
+	stdSvc := standards.NewService(client, cfg)
 
 	switch job {
 	case "count":
-		if err := standards.CountTotalUniqueProducts(cfg.InputPath, job, nsOnly); err != nil {
+		if err := stdSvc.CountTotalUniqueProducts(filename, job, nsOnly); err != nil {
 			return err
 		}
 	case "fetch":
@@ -83,15 +83,15 @@ func RunStandardsTool(job, from, to string, nsOnly, aktualitet, dev bool) error 
 			return err
 		}
 	case "filter":
-		if err := standards.GenerateAktualitetList(cfg.InputPath); err != nil {
+		if err := stdSvc.GenerateAktualitetList(filename); err != nil {
 			return err
 		}
 	case "xml":
-		if err := stdSvc.FindStandardsWithXML(cfg.InputPath); err != nil {
+		if err := stdSvc.FindStandardsWithXML(filename); err != nil {
 			return err
 		}
 	case "download":
-		if err := stdSvc.DownloadFiles(cfg.InputPath, cfg.OutputPath); err != nil {
+		if err := stdSvc.DownloadFiles(filename, opts); err != nil {
 			return err
 		}
 	}

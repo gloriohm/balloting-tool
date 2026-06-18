@@ -142,9 +142,9 @@ func (p *Project) GetRelationURN(relationType string) string {
 	return ""
 }
 
-func (p *Publication) GetReleaseItem(itemType, itemFormat string) (ReleaseItem, error) {
+func (p *Publication) GetReleaseItem(itemType ReleaseItemType, itemFormat ReleaseItemFormat) (ReleaseItem, error) {
 	for _, r := range p.ReleaseItems {
-		if r.Type == itemType && r.Format == itemFormat {
+		if r.Type == string(itemType) && r.Format == string(itemFormat) {
 			return r, nil
 		}
 	}
