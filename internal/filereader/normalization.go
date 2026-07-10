@@ -7,8 +7,12 @@ import (
 
 func normalizeHeaders(headers []string) []string {
 	out := make([]string, len(headers))
-	for i, s := range headers {
-		out[i] = normalization.NormalizeString(s)
+	for i, header := range headers {
+		header = normalization.NormalizeString(header)
+		switch header {
+		case "opening_date":
+			return "start"
+		}
 	}
 
 	return out
