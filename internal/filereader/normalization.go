@@ -14,6 +14,8 @@ func normalizeHeaders(headers []string) []string {
 			out[i] = "opening_date"
 		case "end_date":
 			out[i] = "closing_date"
+		case "committee_working_group":
+			out[i] = "committee"
 		default:
 			out[i] = header
 		}

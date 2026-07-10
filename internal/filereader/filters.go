@@ -1,6 +1,8 @@
 package filereader
 
-import "slices"
+import (
+	"ballot-tool/internal/utils/normalization"
+)
 
 type Filters map[string]Filter
 
@@ -12,24 +14,39 @@ type Filter struct {
 type FilterFunc func(have string, want []string) bool
 
 func inclusiveFilter(have string, want []string) bool {
-	if slices.Contains(want, have) {
-		return true
+	have = normalization.NormalizeString(have)
+	for _, target := range want {
+		if normalization.NormalizeString(target) == have {
+			return true
+		}
 	}
 
 	return false
 }
 
 func exclusiveFilter(have string, want []string) bool {
-	if slices.Contains(want, have) {
-		return false
+	have = normalization.NormalizeString(have)
+	for _, target := range want {
+		if normalization.NormalizeString(target) == have {
+			return false
+		}
 	}
 
 	return true
 }
 
-func passesFilters(row Row, filters map[string]Filter) bool {
+func passesFilters(row Row, filters Filters) bool {
 	for col, filter := range filters {
-		if !filter.Func(row[col], filter.Targets) {
+		value, exists := row[col]
+		if !exists {
+			return false
+		}
+
+		if filter.Func == nil {
+			return false
+		}
+
+		if !filter.Func(value, filter.Targets) {
 			return false
 		}
 	}

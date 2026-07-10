@@ -1,6 +1,7 @@
 package filereader
 
 import (
+	"log"
 	"path/filepath"
 	"strings"
 )
@@ -38,16 +39,20 @@ func NewFilter(s string) (Filters, error) {
 
 	for _, claim := range claims {
 		switch {
-		case strings.Contains(claim, "!="):
-			keyValues := strings.SplitN(claim, "!=", 2)
-			key := keyValues[0]
-			values := splitBySeparator(keyValues[1], ";")
-			f[key] = Filter{Func: inclusiveFilter, Targets: values}
 		case strings.Contains(claim, "=="):
 			keyValues := strings.SplitN(claim, "==", 2)
 			key := keyValues[0]
 			values := splitBySeparator(keyValues[1], ";")
 			f[key] = Filter{Func: inclusiveFilter, Targets: values}
+
+			log.Printf("key: %s; values: %s", key, values)
+		case strings.Contains(claim, "!="):
+			keyValues := strings.SplitN(claim, "!=", 2)
+			key := keyValues[0]
+			values := splitBySeparator(keyValues[1], ";")
+			f[key] = Filter{Func: exclusiveFilter, Targets: values}
+
+			log.Printf("key: %s; values: %s", key, values)
 		default:
 			return nil, ErrUnknownOperator
 		}

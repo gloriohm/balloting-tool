@@ -2,6 +2,8 @@ package filereader
 
 import (
 	"encoding/csv"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -19,10 +21,12 @@ func parseCSV[T any](path string, filters Filters, mapper func(Row) (T, error)) 
 
 	reader := csv.NewReader(file)
 
-	headers, err := reader.Read()
+	rawHeaders, err := reader.Read()
 	if err != nil {
 		return nil, err
 	}
+
+	headers := normalizeHeaders(rawHeaders)
 
 	var out []T
 	rowNum := 1
@@ -52,9 +56,9 @@ func parseCSV[T any](path string, filters Filters, mapper func(Row) (T, error)) 
 		}
 
 		item, err := mapper(row)
-		if err == ErrMalformedData {
+		if errors.Is(err, ErrMalformedData) || errors.Is(err, ErrMissingData) {
 			// upgrade to actual logging
-			log.Printf("skipping row with index %d due to malformed data in one or more fields", rowNum)
+			//log.Printf("%s: skipping row with index %d: %s", path, rowNum, err)
 			continue
 		}
 		if err != nil {
@@ -109,9 +113,9 @@ func parseExcel[T any](path string, filter Filters, mapper func(Row) (T, error))
 		}
 
 		item, err := mapper(row)
-		if err == ErrMalformedData {
+		if errors.Is(err, ErrMalformedData) || errors.Is(err, ErrMissingData) {
 			// upgrade to actual logging
-			log.Printf("skipping row with index %d due to malformed data in one or more fields", rowNum)
+			log.Printf("%s: skipping row with index %d: %s", path, rowNum, err)
 			continue
 		}
 		if err != nil {
@@ -183,22 +187,22 @@ func parseNationalEngagementsRow(row Row) (NationalEngagementsRow, error) {
 func parseCommittee(row Row) (Committee, error) {
 	established, err := time.Parse("2006-01-02", row["committee_established_date"])
 	if err != nil {
-		return Committee{}, ErrMalformedData
+		return Committee{}, fmt.Errorf("committee_established: %w", ErrMalformedData)
 	}
 
 	status, err := parseCommitteeStatus(row["committee_status"])
 	if err != nil {
-		return Committee{}, ErrMalformedData
+		return Committee{}, fmt.Errorf("committee_status: %w", ErrMalformedData)
 	}
 
 	domain, err := parseCommitteeDomain(row["committee_domain"])
 	if err != nil {
-		return Committee{}, ErrMalformedData
+		return Committee{}, fmt.Errorf("committee_domain: %w", ErrMalformedData)
 	}
 
-	level, err := parseCommitteeLevel(row["committee_status"])
+	level, err := parseCommitteeLevel(row["committee_level"])
 	if err != nil {
-		return Committee{}, ErrMalformedData
+		return Committee{}, fmt.Errorf("committee_level: %w", ErrMalformedData)
 	}
 
 	committee := Committee{
@@ -217,23 +221,23 @@ func parseCommittee(row Row) (Committee, error) {
 func parseCommitment(row Row) (Commitment, error) {
 	role := row["commitment_role"]
 	if role == "" {
-		return Commitment{}, ErrMissingData
+		return Commitment{}, fmt.Errorf("commitment_role: %w", ErrMissingData)
 	}
 
 	status, err := parseCommitmentStatus(row["commitment_status"])
 	if err != nil {
-		return Commitment{}, ErrMalformedData
+		return Commitment{}, fmt.Errorf("commitment_status: %w", ErrMalformedData)
 	}
 
 	start, err := time.Parse("2006-01-02", row["commitment_from"])
 	if err != nil {
-		return Commitment{}, ErrMalformedData
+		log.Printf("[WARNING]: commitment for %s - %s parsed without starting date", row["email"], row["committee_name"])
 	}
 
 	end, err := time.Parse("2006-01-02", row["commitment_to"])
 	if err != nil {
 		if row["commitment_to"] != "" {
-			return Commitment{}, ErrMalformedData
+			return Commitment{}, fmt.Errorf("commitment_to: %w", ErrMalformedData)
 		}
 	}
 
