@@ -7,11 +7,9 @@ import (
 	"ballot-tool/internal/utils/config"
 	"fmt"
 	"os"
-	"path/filepath"
-	"time"
 )
 
-func RunBallotTool(opt bool) error {
+func RunBallotTool() error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
@@ -21,44 +19,8 @@ func RunBallotTool(opt bool) error {
 		return fmt.Errorf("create output dir: %w", err)
 	}
 
-	isoPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot1)
-	cenPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot2)
-	ballotPaths := []string{isoPath, cenPath}
-	ballots, err := ballot.GetCombinedBallots(ballotPaths)
-	if err != nil {
-		return err
-	}
-
-	rolesPath := filepath.Join(cfg.InputPath, cfg.Files.Voters)
-	roles, err := ballot.GetVoterRoles(rolesPath)
-	if err != nil {
-		return err
-	}
-
-	requiredBallots, balloutsWithoutVoter := ballot.JoinBallotRole(roles, ballots)
-
-	fileName := fmt.Sprintf("utestående_avstemninger-%s.xlsx", time.Now().Format("2006-01-02"))
-	outPath := filepath.Join(cfg.OutputPath, fileName)
-	if err := ballot.WriteBallotWithRoleXLSX(outPath, requiredBallots, cfg.CentralizedVoters); err != nil {
-		return err
-	}
-
-	missingVoterPath := filepath.Join(cfg.OutputPath, "missing.txt")
-	if err = ballot.WriteBallotsTXT(missingVoterPath, balloutsWithoutVoter); err != nil {
-		return err
-	}
-
-	if opt {
-		orgPath := filepath.Join(cfg.InputPath, cfg.Files.OrgRoles)
-		orgRoles, err := ballot.GetOrgRoles(orgPath)
-		if err != nil {
-			return err
-		}
-		memberWithoutVoter := ballot.JoinCommitteeRole(roles, orgRoles)
-		memberStatus := filepath.Join(cfg.OutputPath, "member_status.txt")
-		if err = ballot.WriteCommitteesTXT(memberStatus, memberWithoutVoter); err != nil {
-			return err
-		}
+	if err := ballot.GenerateBallotReport(cfg); err != nil {
+		return fmt.Errorf("failed to genereate ballot report: %w", err)
 	}
 
 	return nil

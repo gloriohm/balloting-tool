@@ -11,7 +11,7 @@ import (
 func main() {
 	// requires organization roles // outputs P- and O-memeber committees without voter
 	tool := flag.String("tool", "ballots", "which tool to run")
-	member := flag.Bool("member", false, "enable option")
+
 	dev := flag.Bool("dev", false, "set true to use test-date from import tool")
 	job := flag.String("job", "all", "choose what stats you want") //all, national, adoptions, norsok (all does not include norsok at the moment)
 	nsOnly := flag.Bool("ns_only", false, "set to false to include all product types")
@@ -31,7 +31,7 @@ func main() {
 
 	switch *tool {
 	case "ballots":
-		if err := app.RunBallotTool(*member); err != nil {
+		if err := app.RunBallotTool(); err != nil {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "standards":

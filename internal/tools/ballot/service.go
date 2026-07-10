@@ -1,167 +1,57 @@
 package ballot
 
 import (
-	"ballot-tool/internal/utils/read"
-	"bufio"
+	"ballot-tool/internal/filereader"
+	"ballot-tool/internal/utils/config"
 	"fmt"
 	"log"
-	"os"
-
-	"github.com/xuri/excelize/v2"
+	"path/filepath"
+	"time"
 )
 
-func GetBallots(path string) ([]Ballot, error) {
-	rawRows, err := read.LoadTabularDataFromFile(path)
+func GenerateBallotReport(cfg *config.Config) error {
+	isoPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot1)
+	cenPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot2)
+	rolesPath := filepath.Join(cfg.InputPath, cfg.Files.Voters)
+
+	iso, err := filereader.LoadBallots(isoPath, filereader.Filters{})
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed getting iso ballots: %w", err)
 	}
 
-	rowNormalizedHeaders := normalizeHeaders(rawRows, ballotHeaderAliases)
+	log.Printf("retreived %d iso ballots", len(iso))
 
-	ballots, errs := parseBallots(rowNormalizedHeaders)
-	ErrorPrinter(errs, 5)
-
-	return ballots, nil
-}
-
-func GetVoterRoles(path string) ([]Role, error) {
-	rawRows, err := read.LoadTabularDataFromFile(path)
+	cen, err := filereader.LoadBallots(cenPath, filereader.Filters{})
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed getting cen ballots: %w", err)
 	}
 
-	rowNormalizedHeaders := normalizeHeaders(rawRows, rolesHeaderAliases)
+	log.Printf("retreived %d cen ballots", len(cen))
 
-	rolesParsed, roleErrs := parseRoles(rowNormalizedHeaders)
-	ErrorPrinter(roleErrs, 5)
+	ballots := make([]filereader.BallotRow, 0, len(iso)+len(cen))
+	ballots = append(ballots, iso...)
+	ballots = append(ballots, cen...)
 
-	return rolesParsed, nil
-}
+	voterFilter, err := filereader.NewFilter("commitment_role==Voter&committee_domain!=national&commitment_status==active")
 
-func GetOrgRoles(path string) ([]Committee, error) {
-	orgRows, err := read.LoadTabularDataFromFile(path)
+	voters, err := filereader.LoadNationalEngagements(rolesPath, voterFilter)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed getting voter roles: %w", err)
 	}
 
-	orgParsed, orgErrs := parseCommittees(orgRows)
-	ErrorPrinter(orgErrs, 5)
+	log.Printf("retreived %d voter roles", len(voters))
 
-	return orgParsed, nil
-}
-func GetCombinedBallots(paths []string) ([]Ballot, error) {
-	var combinedBallots []Ballot
-	for _, path := range paths {
-		ballots, err := GetBallots(path)
-		if err != nil {
-			return nil, err
-		}
-		combinedBallots = append(combinedBallots, ballots...)
-	}
+	matched, unmatched := matchBallotVoter(ballots, voters)
 
-	return combinedBallots, nil
-}
-
-func JoinBallotRole(roles []Role, ballots []Ballot) ([]BallotWithRole, []Ballot) {
-	roleCommitteeIdx := createRoleComIdx(roles)
-
-	matches := make([]BallotWithRole, 0, len(ballots))
-	missing := make([]Ballot, 0, len(ballots))
-	for _, b := range ballots {
-		match, ok := roleCommitteeIdx[b.Committee]
-		if !ok {
-			missing = append(missing, b)
-			continue
-		}
-
-		matches = append(matches, BallotWithRole{
-			Ballot: b,
-			Role:   *match,
-		})
-	}
-
-	log.Printf("matched %d ballots \n", len(matches))
-	log.Printf("found %d ballots without voter \n", len(missing))
-
-	return matches, missing
-}
-
-func JoinCommitteeRole(roles []Role, coms []Committee) []Committee {
-	roleCommitteeIdx := createRoleComIdx(roles)
-
-	missing := make([]Committee, 0, len(coms))
-
-	for _, c := range coms {
-		_, ok := roleCommitteeIdx[c.Committee]
-		if !ok {
-			missing = append(missing, c)
-			continue
-		}
-	}
-
-	log.Printf("found %d committees with P or O membership without Voter\n", len(missing))
-	return missing
-}
-
-func WriteBallotsTXT(path string, ballots []Ballot) error {
-	f, err := os.Create(path)
-	if err != nil {
+	fileName := fmt.Sprintf("utestående_avstemninger-%s.xlsx", time.Now().Format("2006-01-02"))
+	outPath := filepath.Join(cfg.OutputPath, fileName)
+	if err := writeBallotsMatchedXLSX(outPath, matched, cfg.CentralizedVoters); err != nil {
 		return err
 	}
-	defer f.Close()
 
-	w := bufio.NewWriter(f)
-	defer w.Flush()
-
-	for _, b := range ballots {
-		_, err := fmt.Fprintf(w, "%s\t%s\n", b.Committee, b.Closing)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func WriteCommitteesTXT(path string, coms []Committee) error {
-	f, err := os.Create(path)
-	if err != nil {
+	missingVoterPath := filepath.Join(cfg.OutputPath, "missing.txt")
+	if err = writeMissing(missingVoterPath, unmatched); err != nil {
 		return err
-	}
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-	defer w.Flush()
-
-	for _, c := range coms {
-		_, err := fmt.Fprintf(w, "%s\t%s\n", c.Committee, c.MemberStatus)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func WriteBallotWithRoleXLSX(path string, rows []BallotWithRole, centralizedVoters []string) error {
-	f := excelize.NewFile()
-	sheets := []string{"Utestående"}
-	f.SetSheetName("Sheet1", sheets[0])
-
-	for i := range centralizedVoters {
-		newSheet := fmt.Sprintf("Centralized%d", i+1)
-		f.NewSheet(newSheet)
-		sheets = append(sheets, newSheet)
-	}
-
-	splitRows := filterRowsByVoter(rows, centralizedVoters)
-
-	for i, rows := range splitRows {
-		if err := setBallotCells(f, sheets[i], rows); err != nil {
-			return err
-		}
-	}
-
-	if err := f.SaveAs(path); err != nil {
-		return fmt.Errorf("save file: %w", err)
 	}
 
 	return nil

@@ -10,13 +10,13 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-func sortByCloses(rows []BallotWithRole) {
+func sortByCloses(rows []BallotMatched) {
 	sort.Slice(rows, func(i, j int) bool {
 		return rows[i].Ballot.Closing.Before(rows[j].Ballot.Closing)
 	})
 }
 
-func setBallotCells(f *excelize.File, sheet string, rows []BallotWithRole) error {
+func setBallotCells(f *excelize.File, sheet string, rows []BallotMatched) error {
 	sortByCloses(rows)
 
 	headers := []string{
@@ -47,13 +47,13 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotWithRole) error
 		if err := f.SetCellValue(sheet, fmt.Sprintf("C%d", rowNum), br.Ballot.Closing); err != nil {
 			return err
 		}
-		if err := f.SetCellValue(sheet, fmt.Sprintf("D%d", rowNum), br.Role.FirstName); err != nil {
+		if err := f.SetCellValue(sheet, fmt.Sprintf("D%d", rowNum), br.Voter.FirstName); err != nil {
 			return err
 		}
-		if err := f.SetCellValue(sheet, fmt.Sprintf("E%d", rowNum), br.Role.LastName); err != nil {
+		if err := f.SetCellValue(sheet, fmt.Sprintf("E%d", rowNum), br.Voter.LastName); err != nil {
 			return err
 		}
-		if err := f.SetCellValue(sheet, fmt.Sprintf("F%d", rowNum), br.Role.Email); err != nil {
+		if err := f.SetCellValue(sheet, fmt.Sprintf("F%d", rowNum), br.Voter.Email); err != nil {
 			return err
 		}
 		if err := f.SetCellValue(sheet, fmt.Sprintf("G%d", rowNum), br.Ballot.URL); err != nil {
@@ -68,13 +68,13 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotWithRole) error
 	return nil
 }
 
-func filterRowsByVoter(rows []BallotWithRole, voters []string) [][]BallotWithRole {
+func filterRowsByVoter(rows []BallotMatched, voters []string) [][]BallotMatched {
 	voterIdx, _ := normalization.IndexStrings(voters, 1)
 
-	out := make([][]BallotWithRole, len(voters)+1)
+	out := make([][]BallotMatched, len(voters)+1)
 
 	for _, row := range rows {
-		email := normalization.ToLowerCase(row.Role.Email)
+		email := normalization.ToLowerCase(row.Voter.Email)
 
 		if i, ok := voterIdx[email]; ok {
 			out[i] = append(out[i], row)

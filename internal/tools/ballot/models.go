@@ -3,7 +3,6 @@ package ballot
 import "time"
 
 type Ballot struct {
-	Source    string // "cen" or "iso"
 	Committee string
 	Reference string
 	Closing   time.Time
@@ -11,20 +10,13 @@ type Ballot struct {
 	URL       string
 }
 
-type Role struct {
-	Committee string
+type BallotMatched struct {
+	Ballot Ballot
+	Voter  Voter
+}
+
+type Voter struct {
 	FirstName string
 	LastName  string
 	Email     string
-}
-
-type BallotWithRole struct {
-	Ballot Ballot
-	Role   Role
-}
-
-type Committee struct {
-	Committee    string
-	MemberStatus string
-	Domain       string
 }
