@@ -128,16 +128,15 @@ func parseExcel[T any](path string, filter Filters, mapper func(Row) (T, error))
 	return out, nil
 }
 
-func parseStandardDashboardRow(row Row) StandardDashboardRow {
+func parseStandardDashboardRow(row Row) (StandardDashboardRow, error) {
 	return StandardDashboardRow{
+		ImportID:  row["id"],
+		Reference: row["reference"],
 		PubStatus: row["pub_status"],
 		Language:  row["lang"],
-		ImportID:  row["projectid"],
 		Title:     row["title"],
-		Reference: row["reference"],
 		SDO:       row["sdo"],
-		SareptaID: row["id"],
-	}
+	}, nil
 }
 
 func parseBallotRow(row Row) (BallotRow, error) {

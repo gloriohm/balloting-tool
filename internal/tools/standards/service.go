@@ -2,6 +2,7 @@ package standards
 
 import (
 	"ballot-tool/internal/api/sdimport"
+	"ballot-tool/internal/filereader"
 	"ballot-tool/internal/utils/config"
 	"ballot-tool/internal/utils/normalization"
 	"ballot-tool/internal/utils/read"
@@ -181,7 +182,7 @@ func (s *Service) FindStandardsWithXML(path string) error {
 			log.Printf("could not get publication for %s: %s\n", urn, err)
 			continue
 		}
-		_, err = pub.GetReleaseItem(sdimport.ReleaseItemTypeStandard, sdimport.ReleaseItemFormatXML)
+		_, err = pub.GetReleaseItems(sdimport.ReleaseItemTypeStandard, sdimport.ReleaseItemFormatXML)
 		withFile := StandardFile{StandardCore: std}
 		if err == nil {
 			withFile.HasFile = true
@@ -200,19 +201,18 @@ func (s *Service) FindStandardsWithXML(path string) error {
 
 func (s *Service) DownloadFiles(in string, opts string) error {
 	path := filepath.Join(s.cfg.InputPath, in)
-	data, err := read.LoadTabularDataFromFile(path)
+	filter, err := filereader.NewFilter("stage==Working")
+	standards, err := filereader.LoadStandardsDashboard(path, filter)
 	if err != nil {
 		return fmt.Errorf("error loading data at path %s: %w", in, err)
 	}
-
-	standards := rowToStandard(data)
 
 	targets := createDownloadJob(opts)
 
 	downloadsFolder := filepath.Join(s.cfg.OutputPath, "downloads")
 
 	for _, std := range standards {
-		urn := fmt.Sprintf("sn:proj:%s", std.URN)
+		urn := fmt.Sprintf("sn:proj:%s", std.ImportID)
 		pub, err := s.sdimport.GetPublicationByProject(urn, "published")
 		if err != nil {
 			log.Printf("could not get publication for %s: %s\n", urn, err)
@@ -226,18 +226,37 @@ func (s *Service) DownloadFiles(in string, opts string) error {
 		}
 
 		for _, t := range targets {
-			rel, err := pub.GetReleaseItem(t.itemType, t.itemFormat)
+			items, err := pub.GetReleaseItems(t.itemType, t.itemFormat)
 			if err != nil {
-				log.Printf("could not find item for %s: %s\n", pub.Reference, err)
+				log.Printf("%s: %s\n", pub.Reference, err)
 				continue
 			}
 
-			if err := s.sdimport.GetFile(rel.ContentRef, stdFolder); err != nil {
-				log.Printf("could not save file %s: %s\n", rel.ContentRef.FileName, err)
-				continue
+			for _, i := range items {
+				lang := extractLanguage(i.Language)
+				languageFolder := filepath.Join(stdFolder, lang)
+				attachmentsFolder := filepath.Join(languageFolder, "attachments")
+				if err := os.MkdirAll(languageFolder, 0755); err != nil {
+					return err
+				}
+
+				switch i.Type {
+				case string(sdimport.ReleaseItemTypeOther):
+					if err := os.MkdirAll(attachmentsFolder, 0755); err != nil {
+						return err
+					}
+					if err := s.sdimport.GetFile(i.ContentRef, attachmentsFolder); err != nil {
+						log.Printf("could not save file %s: %s\n", i.ContentRef.FileName, err)
+						continue
+					}
+				default:
+					if err := s.sdimport.GetFile(i.ContentRef, languageFolder); err != nil {
+						log.Printf("could not save file %s: %s\n", i.ContentRef.FileName, err)
+						continue
+					}
+				}
 			}
 		}
-
 	}
 
 	return nil

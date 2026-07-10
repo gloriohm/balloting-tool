@@ -3,6 +3,7 @@ package standards
 import (
 	"ballot-tool/internal/api/sdimport"
 	"log"
+	"slices"
 	"strings"
 )
 
@@ -62,4 +63,14 @@ func wordTarget() Target {
 
 func anyTarget() Target {
 	return Target{itemType: sdimport.ReleaseItemTypeOther, itemFormat: sdimport.ReleaseItemFormatAny}
+}
+
+func extractLanguage(lang []string) string {
+	if len(lang) == 0 {
+		return "missing_language_code"
+	}
+
+	slices.Sort(lang)
+
+	return strings.Join(lang, "_")
 }

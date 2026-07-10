@@ -43,13 +43,12 @@ type Company struct {
 }
 
 type StandardDashboardRow struct {
+	ImportID  string
+	Reference string
 	PubStatus string
 	Language  string
-	ImportID  string
 	Title     string
-	Reference string
 	SDO       string
-	SareptaID string
 }
 
 type StandardAdvancedRow struct {

@@ -142,14 +142,19 @@ func (p *Project) GetRelationURN(relationType string) string {
 	return ""
 }
 
-func (p *Publication) GetReleaseItem(itemType ReleaseItemType, itemFormat ReleaseItemFormat) (ReleaseItem, error) {
+func (p *Publication) GetReleaseItems(itemType ReleaseItemType, itemFormat ReleaseItemFormat) ([]ReleaseItem, error) {
+	var items []ReleaseItem
 	for _, r := range p.ReleaseItems {
 		if r.Type == string(itemType) && r.Format == string(itemFormat) {
-			return r, nil
+			items = append(items, r)
 		}
 	}
 
-	return ReleaseItem{}, fmt.Errorf("found no items of type %s and format %s on publication %s", itemType, itemFormat, p.Reference)
+	if len(items) == 0 {
+		return nil, fmt.Errorf("found no items of type %s and format %s on publication %s", itemType, itemFormat, p.Reference)
+	} else {
+		return items, nil
+	}
 }
 
 func dumpResponse(resp *http.Response) (Response, error) {

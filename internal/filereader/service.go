@@ -23,6 +23,10 @@ func LoadBallots(path string, filter Filters) ([]BallotRow, error) {
 	}
 }
 
+func LoadStandardsDashboard(path string, filters Filters) ([]StandardDashboardRow, error) {
+	return parseCSV(path, filters, parseStandardDashboardRow)
+}
+
 func NewFilter(s string) (Filters, error) {
 	// filterstring should follow format key (identical to normalized column name)
 	// operator == for inclusive or != for exclusive
