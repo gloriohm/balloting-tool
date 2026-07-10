@@ -10,8 +10,12 @@ func normalizeHeaders(headers []string) []string {
 	for i, header := range headers {
 		header = normalization.NormalizeString(header)
 		switch header {
-		case "opening_date":
-			return "start"
+		case "start_date":
+			out[i] = "opening_date"
+		case "end_date":
+			out[i] = "closing_date"
+		default:
+			out[i] = header
 		}
 	}
 
