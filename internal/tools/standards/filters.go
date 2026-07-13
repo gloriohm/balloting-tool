@@ -12,11 +12,11 @@ import (
 var suffixRef = regexp.MustCompile(`:\d{4}/[^/]+:\d{4}$`)
 
 var (
-	norskStandardNational  = []string{"NS "}
-	norsokPrefix           = []string{"NORSOK"}
-	norskStandardAdoption  = []string{"NS-"}
-	technicalOtherNational = []string{"SN_", "SN-NSPEK", "P-", "NHS"}
-	otherAdoptions         = []string{"SN-CEN", "SN-ISO"}
+	norskStandardNational  = []string{"ns_"}
+	norsokPrefix           = []string{"norsok"}
+	norskStandardAdoption  = []string{"ns-"}
+	technicalOtherNational = []string{"sn_", "sn-nspek", "p-", "nhs"}
+	otherAdoptions         = []string{"sn-cen", "sn-iso"}
 
 	allNorskStandardPrefixes = append(append([]string{}, norskStandardNational...), norskStandardAdoption...)
 	allAdoptionPrefixes      = append(append([]string{}, norskStandardAdoption...), otherAdoptions...)

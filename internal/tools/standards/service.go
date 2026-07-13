@@ -22,39 +22,43 @@ func NewService(sdimport *sdimport.Client, cfg *config.Config) *Service {
 	return &Service{sdimport: sdimport, cfg: cfg}
 }
 
-func (s *Service) GenerateAktualitetList(pathToFolder string) error {
-	data, err := read.LoadTabularDataFromFolder(pathToFolder)
+func (s *Service) GenerateAktualitetList(in string) error {
+	path := filepath.Join(s.cfg.InputPath, in)
+
+	filters := filereader.NewProjectsFilter()
+	prefixes := append(norskStandardNational, technicalOtherNational...)
+	filters.NewBeginsWith("reference", prefixes, true)
+	log.Print(filters)
+
+	standards, err := filereader.LoadStandardsDashboard(path, filters)
 	if err != nil {
-		return err
+		return fmt.Errorf("error loading data at path %s: %w", path, err)
 	}
 
-	all := rowToStandard(data)
-	standards, _ := filterByAdoptionType(all, "national", false)
-
-	filtered := make(map[string]StandardCore)
+	var filtered []string
 	for _, std := range standards {
 		if !divisibleByFive(std.Reference) {
 			log.Printf("[Aktualitet] skipped %s due to not being released five year period\n", std.Reference)
 			continue
 		}
 		if isAddons(std.Reference) {
-			//log.Printf("[Addon] skipped %s due to being an addon\n", std.Reference)
+			log.Printf("[Addon] skipped %s due to being an addon\n", std.Reference)
 			continue
 		}
 		if hasLanguageCodeInReference(std.Reference) {
-			//log.Printf("[Lang Code] skipped %s due to language code in reference\n", std.Reference)
+			log.Printf("[Lang Code] skipped %s due to language code in reference\n", std.Reference)
 			continue
 		}
 
-		filtered[std.Reference] = std
+		filtered = append(filtered, std.ImportID)
 	}
 
 	var aktStandard []AktualitetStandard
-	for _, std := range filtered {
-		id := "sn:proj:" + std.URN
+	for _, importID := range filtered {
+		id := "sn:proj:" + importID
 		proj, err := s.sdimport.GetProject(id)
 		if err != nil {
-			log.Printf("failed fetching metadata for %s: %s\n", std.Reference, err)
+			log.Printf("failed fetching metadata for %s: %s\n", importID, err)
 			continue
 		}
 
@@ -63,7 +67,7 @@ func (s *Service) GenerateAktualitetList(pathToFolder string) error {
 		aktStandard = append(aktStandard, standard)
 	}
 
-	return WriteAktualitetExcel(pathToFolder, aktStandard)
+	return WriteAktualitetExcel(s.cfg.OutputPath, aktStandard)
 }
 
 func (s *Service) CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error {
@@ -171,12 +175,9 @@ func (s *Service) CreateStandardFromPublication(pub sdimport.Publication) (Stand
 func (s *Service) FindStandardsWithXML(in string) error {
 	path := filepath.Join(s.cfg.InputPath, in)
 
-	filter, err := filereader.NewFilter("stage==Working")
-	if err != nil {
-		return fmt.Errorf("failed to initialize filter: %w", err)
-	}
+	filters := filereader.NewProjectsFilter()
 
-	standards, err := filereader.LoadStandardsDashboard(path, filter)
+	standards, err := filereader.LoadStandardsDashboard(path, filters)
 	if err != nil {
 		return fmt.Errorf("error loading data at path %s: %w", path, err)
 	}
@@ -213,12 +214,9 @@ func (s *Service) FindStandardsWithXML(in string) error {
 func (s *Service) DownloadFiles(in string, opts string) error {
 	path := filepath.Join(s.cfg.InputPath, in)
 
-	filter, err := filereader.NewFilter("stage==Working")
-	if err != nil {
-		return fmt.Errorf("failed to initialize filter: %w", err)
-	}
+	filters := filereader.NewProjectsFilter()
 
-	standards, err := filereader.LoadStandardsDashboard(path, filter)
+	standards, err := filereader.LoadStandardsDashboard(path, filters)
 	if err != nil {
 		return fmt.Errorf("error loading data at path %s: %w", path, err)
 	}
