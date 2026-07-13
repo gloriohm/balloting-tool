@@ -2,6 +2,7 @@ package filereader
 
 import (
 	"ballot-tool/internal/utils/normalization"
+	"strings"
 )
 
 type Filters map[string]Filter
@@ -24,10 +25,32 @@ func inclusiveFilter(have string, want []string) bool {
 	return false
 }
 
+func inclusiveHasPrefixFilter(have string, want []string) bool {
+	have = normalization.NormalizeString(have)
+	for _, target := range want {
+		if strings.HasPrefix(have, normalization.NormalizeString(target)) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func exclusiveFilter(have string, want []string) bool {
 	have = normalization.NormalizeString(have)
 	for _, target := range want {
 		if normalization.NormalizeString(target) == have {
+			return false
+		}
+	}
+
+	return true
+}
+
+func exclusiveHasPrefixFilter(have string, want []string) bool {
+	have = normalization.NormalizeString(have)
+	for _, target := range want {
+		if strings.HasPrefix(have, normalization.NormalizeString(target)) {
 			return false
 		}
 	}

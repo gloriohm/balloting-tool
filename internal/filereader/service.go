@@ -1,6 +1,7 @@
 package filereader
 
 import (
+	"ballot-tool/internal/utils/normalization"
 	"log"
 	"path/filepath"
 	"strings"
@@ -63,4 +64,25 @@ func NewFilter(s string) (Filters, error) {
 	}
 
 	return f, nil
+}
+
+func (f Filters) NewBeginsWith(column string, targets []string, inclusive bool) {
+	column = normalization.NormalizeString(column)
+
+	fn := exclusiveHasPrefixFilter
+	if inclusive {
+		fn = inclusiveHasPrefixFilter
+	}
+
+	f[column] = Filter{
+		Targets: targets,
+		Func:    fn,
+	}
+}
+
+func NewProjectsFilter() Filters {
+	f := make(Filters, 1)
+	f["stage"] = Filter{Targets: []string{"working"}, Func: inclusiveFilter}
+
+	return f
 }
