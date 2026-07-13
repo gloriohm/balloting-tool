@@ -6,6 +6,7 @@ import (
 	"ballot-tool/internal/utils/config"
 	"ballot-tool/internal/utils/normalization"
 	"ballot-tool/internal/utils/read"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -167,32 +168,42 @@ func (s *Service) CreateStandardFromPublication(pub sdimport.Publication) (Stand
 	return standard, nil
 }
 
-func (s *Service) FindStandardsWithXML(path string) error {
-	data, err := read.LoadTabularDataFromFile(fmt.Sprintf("%s/full.csv", path))
+func (s *Service) FindStandardsWithXML(in string) error {
+	path := filepath.Join(s.cfg.InputPath, in)
+
+	filter, err := filereader.NewFilter("stage==Working")
+	if err != nil {
+		return fmt.Errorf("failed to initialize filter: %w", err)
+	}
+
+	standards, err := filereader.LoadStandardsDashboard(path, filter)
 	if err != nil {
 		return fmt.Errorf("error loading data at path %s: %w", path, err)
 	}
 
-	standards := rowToStandard(data)
-	var out []StandardFile
+	out := make(map[bool][]string, 2)
 	for _, std := range standards {
-		urn := fmt.Sprintf("sn:proj:%s", std.URN)
+		urn := fmt.Sprintf("sn:proj:%s", std.ImportID)
 		pub, err := s.sdimport.GetPublicationByProject(urn, "published")
 		if err != nil {
 			log.Printf("could not get publication for %s: %s\n", urn, err)
 			continue
 		}
 		_, err = pub.GetReleaseItems(sdimport.ReleaseItemTypeStandard, sdimport.ReleaseItemFormatXML)
-		withFile := StandardFile{StandardCore: std}
-		if err == nil {
-			withFile.HasFile = true
-		} else {
-			withFile.HasFile = false
+
+		switch {
+		case err == nil:
+			out[true] = append(out[true], pub.Reference)
+		case errors.Is(err, sdimport.ErrNoFiles):
+			out[false] = append(out[false], pub.Reference)
+		default:
+			log.Printf("unexpected error when getting release items for %s: %s\n", pub.Reference, err)
+			continue
 		}
-		out = append(out, withFile)
 	}
 
-	if err := WriteHasFileExcel(path, out); err != nil {
+	outPath := filepath.Join(s.cfg.OutputPath, "has_xml.xlsx")
+	if err := WriteHasFileExcel(outPath, out); err != nil {
 		return err
 	}
 
@@ -201,10 +212,15 @@ func (s *Service) FindStandardsWithXML(path string) error {
 
 func (s *Service) DownloadFiles(in string, opts string) error {
 	path := filepath.Join(s.cfg.InputPath, in)
+
 	filter, err := filereader.NewFilter("stage==Working")
+	if err != nil {
+		return fmt.Errorf("failed to initialize filter: %w", err)
+	}
+
 	standards, err := filereader.LoadStandardsDashboard(path, filter)
 	if err != nil {
-		return fmt.Errorf("error loading data at path %s: %w", in, err)
+		return fmt.Errorf("error loading data at path %s: %w", path, err)
 	}
 
 	targets := createDownloadJob(opts)

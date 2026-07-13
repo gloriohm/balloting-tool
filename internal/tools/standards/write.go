@@ -46,12 +46,12 @@ func WriteAktualitetExcel(path string, standards []AktualitetStandard) error {
 	return nil
 }
 
-func WriteHasFileExcel(path string, standards []StandardFile) error {
+func WriteHasFileExcel(path string, standards map[bool][]string) error {
 	f := excelize.NewFile()
 	sheet := "resultat"
 	f.SetSheetName("Sheet1", sheet)
 
-	headers := []string{"referanse", "tittel", "språk", "xml"}
+	headers := []string{"referanse", "har_xml"}
 
 	for col, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(col+1, 1)
@@ -60,17 +60,15 @@ func WriteHasFileExcel(path string, standards []StandardFile) error {
 
 	row := 2
 
-	for _, s := range standards {
-		f.SetCellValue(sheet, fmt.Sprintf("A%d", row), s.Reference)
-		f.SetCellValue(sheet, fmt.Sprintf("B%d", row), s.Title)
-		f.SetCellValue(sheet, fmt.Sprintf("C%d", row), s.Language)
-		f.SetCellValue(sheet, fmt.Sprintf("D%d", row), s.HasFile)
-
-		row++
+	for col, s := range standards {
+		for _, ref := range s {
+			f.SetCellValue(sheet, fmt.Sprintf("A%d", row), ref)
+			f.SetCellValue(sheet, fmt.Sprintf("B%d", row), col)
+			row++
+		}
 	}
 
-	filepath := path + "/standarder_med_xml.xlsx"
-	if err := f.SaveAs(filepath); err != nil {
+	if err := f.SaveAs(path); err != nil {
 		return err
 	}
 

@@ -151,7 +151,7 @@ func (p *Publication) GetReleaseItems(itemType ReleaseItemType, itemFormat Relea
 	}
 
 	if len(items) == 0 {
-		return nil, fmt.Errorf("found no items of type %s and format %s on publication %s", itemType, itemFormat, p.Reference)
+		return nil, fmt.Errorf("%w: found no items of type %s and format %s on publication %s", ErrNoFiles, itemType, itemFormat, p.Reference)
 	} else {
 		return items, nil
 	}
