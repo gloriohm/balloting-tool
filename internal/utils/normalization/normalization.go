@@ -6,13 +6,12 @@ import (
 	"time"
 )
 
-var nonAlnum = regexp.MustCompile(`[^a-z0-9+\-]+`)
+var nonAlnum = regexp.MustCompile(`[^a-z0-9+-]+`)
 
 func NormalizeString(s string) string {
 	s = strings.TrimSpace(s)
 	s = strings.ToLower(s)
 	s = nonAlnum.ReplaceAllString(s, "_")
-	s = strings.Trim(s, "_")
 	return s
 }
 
