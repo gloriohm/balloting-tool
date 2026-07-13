@@ -6,6 +6,7 @@ import (
 	"ballot-tool/internal/tools/standards"
 	"ballot-tool/internal/utils/config"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -26,7 +27,7 @@ func RunBallotTool() error {
 	return nil
 }
 
-func RunStandardsTool(job, from, to, filename, opts string, nsOnly, aktualitet, dev bool) error {
+func RunStandardsTool(job, from, to, filename, opts string, nsOnly, dev bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
@@ -44,7 +45,7 @@ func RunStandardsTool(job, from, to, filename, opts string, nsOnly, aktualitet, 
 		if err := stdSvc.GetStandards(); err != nil {
 			return err
 		}
-	case "filter":
+	case "aktualitet":
 		if err := stdSvc.GenerateAktualitetList(filename); err != nil {
 			return err
 		}
@@ -56,6 +57,8 @@ func RunStandardsTool(job, from, to, filename, opts string, nsOnly, aktualitet, 
 		if err := stdSvc.DownloadFiles(filename, opts); err != nil {
 			return err
 		}
+	default:
+		log.Println("unknown job")
 	}
 
 	return nil
