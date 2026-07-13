@@ -14,7 +14,6 @@ func main() {
 
 	dev := flag.Bool("dev", false, "set true to use test-date from import tool")
 	job := flag.String("job", "all", "choose what stats you want") //all, national, adoptions, norsok (all does not include norsok at the moment)
-	nsOnly := flag.Bool("ns_only", false, "set to false to include all product types")
 	//urn := flag.String("urn", "snv:proj:1973783", "urn of project to retrieve")
 	from := flag.String("from", "2026-05-27", "publication date range begin")
 	to := flag.String("to", "2026-06-03", "publication date range begin end")
@@ -34,7 +33,7 @@ func main() {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "standards":
-		if err := app.RunStandardsTool(*job, *from, *to, *file, *opt, *nsOnly, *dev); err != nil {
+		if err := app.RunStandardsTool(*job, *from, *to, *file, *opt, *dev); err != nil {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	default:

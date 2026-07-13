@@ -27,7 +27,7 @@ func RunBallotTool() error {
 	return nil
 }
 
-func RunStandardsTool(job, from, to, filename, opts string, nsOnly, dev bool) error {
+func RunStandardsTool(job, from, to, filename, opts string, dev bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func RunStandardsTool(job, from, to, filename, opts string, nsOnly, dev bool) er
 
 	switch job {
 	case "count":
-		if err := stdSvc.CountTotalUniqueProducts(filename, job, nsOnly); err != nil {
+		if err := stdSvc.CountTotalUniqueProducts(filename); err != nil {
 			return err
 		}
 	case "fetch":

@@ -5,7 +5,6 @@ import (
 	"ballot-tool/internal/filereader"
 	"ballot-tool/internal/utils/config"
 	"ballot-tool/internal/utils/normalization"
-	"ballot-tool/internal/utils/read"
 	"errors"
 	"fmt"
 	"log"
@@ -70,18 +69,20 @@ func (s *Service) GenerateAktualitetList(in string) error {
 	return WriteAktualitetExcel(s.cfg.OutputPath, aktStandard)
 }
 
-func (s *Service) CountTotalUniqueProducts(pathToFolder, selection string, nsOnly bool) error {
-	data, err := read.LoadTabularDataFromFolder(pathToFolder)
+func (s *Service) CountTotalUniqueProducts(in string) error {
+	path := filepath.Join(s.cfg.InputPath, in)
+	filters := filereader.NewProjectsFilter()
+	prefixes := append(norskStandardNational, technicalOtherNational...)
+	filters.NewBeginsWith("reference", prefixes, true)
+	standards, err := filereader.LoadStandardsDashboard(path, filters)
 	if err != nil {
-		return err
+		return fmt.Errorf("error loading data at path %s: %w", path, err)
 	}
 
 	count := Counter{}
-	all := rowToStandard(data)
-	standards, resultLog := filterByAdoptionType(all, selection, nsOnly)
 
 	filtered := make(map[string]struct{})
-	var includeDupes []StandardCore
+	var includeDupes []string
 
 	for _, s := range standards {
 		if !isAllowedLanguage(s.Language, []string{"en", "no", "nb", "nn"}) {
@@ -104,16 +105,15 @@ func (s *Service) CountTotalUniqueProducts(pathToFolder, selection string, nsOnl
 		if exists {
 			count.Duplicate++
 		}
-		includeDupes = append(includeDupes, s)
+		includeDupes = append(includeDupes, s.Reference)
 		filtered[s.Reference] = struct{}{}
 	}
 
-	log.Printf("Total in: %d; Total after selection filtration: %d; diff: %d", resultLog.In, resultLog.Out, resultLog.Diff)
 	log.Printf("%d standards in selection\n", len(filtered))
 	log.Printf("%d standards inkludert oversettelser\n", len(includeDupes))
 	log.Printf("total discarded:\nLang: %d\nAddon: %d\nLang code in ref: %d\nDuplicate reference: %d\n", count.Lang, count.Addon, count.LangCode, count.Duplicate)
 
-	if err := WriteResultTXT(pathToFolder, filtered, count); err != nil {
+	if err := WriteResultTXT(s.cfg.OutputPath, filtered, count); err != nil {
 		return err
 	}
 	return nil
