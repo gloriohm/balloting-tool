@@ -20,6 +20,7 @@ func parseCSV[T any](path string, filters Filters, mapper func(Row) (T, error)) 
 	}
 
 	reader := csv.NewReader(file)
+	reader.Comma = ';'
 
 	rawHeaders, err := reader.Read()
 	if err != nil {
