@@ -9,6 +9,7 @@ import (
 var nonAlnum = regexp.MustCompile(`[^a-z0-9+-]+`)
 
 func NormalizeString(s string) string {
+	s = strings.TrimPrefix(s, "\uFEFF")
 	s = strings.TrimSpace(s)
 	s = strings.ToLower(s)
 	s = nonAlnum.ReplaceAllString(s, "_")
