@@ -29,6 +29,12 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotMatched) error 
 		"URL",
 	}
 
+	dateFormat := "yyyy-mm-dd"
+	dateStyle, err := f.NewStyle(&excelize.Style{CustomNumFmt: &dateFormat})
+	if err != nil {
+		return err
+	}
+
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		if err := f.SetCellValue(sheet, cell, h); err != nil {
@@ -38,6 +44,7 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotMatched) error 
 
 	for rIdx, br := range rows {
 		rowNum := rIdx + 2
+
 		if err := f.SetCellValue(sheet, fmt.Sprintf("A%d", rowNum), br.Ballot.Committee); err != nil {
 			return err
 		}
@@ -59,6 +66,15 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotMatched) error 
 		if err := f.SetCellValue(sheet, fmt.Sprintf("G%d", rowNum), br.Ballot.URL); err != nil {
 			return err
 		}
+		if br.Ballot.URL != "" {
+			if err := f.SetCellHyperLink(sheet, fmt.Sprintf("G%d", rowNum), br.Ballot.URL, "External"); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err := f.SetColStyle(sheet, "C", dateStyle); err != nil {
+		log.Println(err)
 	}
 
 	if err := f.SetColWidth(sheet, "A", "G", 20); err != nil {
