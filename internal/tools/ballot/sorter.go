@@ -34,6 +34,15 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotMatched) error 
 	if err != nil {
 		return err
 	}
+	linkStyle, err := f.NewStyle(&excelize.Style{
+		Font: &excelize.Font{
+			Color:     "0563C1",
+			Underline: "single",
+		},
+	})
+	if err != nil {
+		return err
+	}
 
 	for i, h := range headers {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
@@ -64,6 +73,9 @@ func setBallotCells(f *excelize.File, sheet string, rows []BallotMatched) error 
 			return err
 		}
 		if err := f.SetCellValue(sheet, fmt.Sprintf("G%d", rowNum), br.Ballot.URL); err != nil {
+			return err
+		}
+		if err := f.SetCellStyle(sheet, fmt.Sprintf("G%d", rowNum), fmt.Sprintf("G%d", rowNum), linkStyle); err != nil {
 			return err
 		}
 		if br.Ballot.URL != "" {
