@@ -13,14 +13,14 @@ func LoadNationalEngagements(path string, filter Filters) ([]NationalEngagements
 	return parseCSV(path, filter, parseNationalEngagementsRow)
 }
 
-func LoadBallots(path string, filter Filters) ([]BallotRow, error) {
+func LoadBallots(path string) ([]BallotRow, error) {
 	filetype := filepath.Ext(path)
 
 	switch filetype {
 	case ".csv":
-		return parseCSV(path, filter, parseBallotRow)
+		return parseCSV(path, Filters{}, parseBallotRow)
 	case ".xlsx":
-		return parseExcel(path, filter, parseBallotRow)
+		return parseExcel(path, Filters{}, parseBallotRow)
 	default:
 		return nil, ErrInvalidFileType
 	}

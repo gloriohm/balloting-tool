@@ -14,14 +14,14 @@ func GenerateBallotReport(cfg *config.Config) error {
 	cenPath := filepath.Join(cfg.InputPath, cfg.Files.Ballot2)
 	rolesPath := filepath.Join(cfg.InputPath, cfg.Files.Voters)
 
-	iso, err := filereader.LoadBallots(isoPath, filereader.Filters{})
+	iso, err := filereader.LoadBallots(isoPath)
 	if err != nil {
 		return fmt.Errorf("failed getting iso ballots: %w", err)
 	}
 
 	log.Printf("retreived %d iso ballots", len(iso))
 
-	cen, err := filereader.LoadBallots(cenPath, filereader.Filters{})
+	cen, err := filereader.LoadBallots(cenPath)
 	if err != nil {
 		return fmt.Errorf("failed getting cen ballots: %w", err)
 	}
@@ -32,9 +32,12 @@ func GenerateBallotReport(cfg *config.Config) error {
 	ballots = append(ballots, iso...)
 	ballots = append(ballots, cen...)
 
-	voterFilter, err := filereader.NewFilter("commitment_role==Voter&committee_domain!=national&commitment_status==active")
+	filter := filereader.Filters{}
+	filter = append(filter, filereader.NewInclusiveStringFilter("commitment_role", map[string]struct{}{"Voter": {}}))
+	filter = append(filter, filereader.NewInclusiveStringFilter("commitment_status", map[string]struct{}{"active": {}}))
+	filter = append(filter, filereader.NewInclusiveStringFilter("committee_domain", map[string]struct{}{"regional": {}, "international": {}}))
 
-	voters, err := filereader.LoadNationalEngagements(rolesPath, voterFilter)
+	voters, err := filereader.LoadNationalEngagements(rolesPath, filter)
 	if err != nil {
 		return fmt.Errorf("failed getting voter roles: %w", err)
 	}
