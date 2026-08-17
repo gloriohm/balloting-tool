@@ -2,9 +2,11 @@ package filereader
 
 import (
 	"ballot-tool/internal/utils/normalization"
+	"ballot-tool/internal/utils/parsing"
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func LoadNationalEngagements(path string, filter Filters) ([]NationalEngagementsRow, error) {
@@ -48,14 +50,16 @@ func NewFilter(s string) (Filters, error) {
 			keyValues := strings.SplitN(claim, "==", 2)
 			key := keyValues[0]
 			values := splitBySeparator(keyValues[1], ";")
-			f[key] = Filter{Func: inclusiveFilter, Targets: values}
+			set := parsing.ToSet(values)
+			f = append(f, InclusiveStringFilter{Field: key, Values: set})
 
 			log.Printf("key: %s; values: %s", key, values)
 		case strings.Contains(claim, "!="):
 			keyValues := strings.SplitN(claim, "!=", 2)
 			key := keyValues[0]
 			values := splitBySeparator(keyValues[1], ";")
-			f[key] = Filter{Func: exclusiveFilter, Targets: values}
+			set := parsing.ToSet(values)
+			f = append(f, ExclusiveStringFilter{Field: key, Values: set})
 
 			log.Printf("key: %s; values: %s", key, values)
 		default:
@@ -66,23 +70,39 @@ func NewFilter(s string) (Filters, error) {
 	return f, nil
 }
 
-func (f Filters) NewBeginsWith(column string, targets []string, inclusive bool) {
+func NewInclusiveStringFilter(column string, targets map[string]struct{}) InclusiveStringFilter {
+	return InclusiveStringFilter{Field: column, Values: targets}
+}
+
+func NewExclusiveStringFilter(column string, targets map[string]struct{}) ExclusiveStringFilter {
+	return ExclusiveStringFilter{Field: column, Values: targets}
+}
+
+func NewGreaterThanFilter(column string, target time.Time) GreaterOrEqualTime {
+	return GreaterOrEqualTime{Field: column, Value: target}
+}
+
+func NewLessThanFilter(column string, target time.Time) LessOrEqualTime {
+	return LessOrEqualTime{Field: column, Value: target}
+}
+
+func (f *Filters) NewBeginsWith(column string, targets map[string]struct{}) {
 	column = normalization.NormalizeString(column)
+	*f = append(*f, HasPrefixFilter{Field: column, Values: targets})
+}
 
-	fn := exclusiveHasPrefixFilter
-	if inclusive {
-		fn = inclusiveHasPrefixFilter
-	}
+func (f *Filters) NewNotSuffixFilter(column string, targets map[string]struct{}) {
+	column = normalization.NormalizeString(column)
+	*f = append(*f, NotSuffixFilter{Field: column, Values: targets})
+}
 
-	f[column] = Filter{
-		Targets: targets,
-		Func:    fn,
-	}
+func (f *Filters) NewEngagementsMinRangeFilter() {
+	*f = append(*f, EngagementMinRangeFilter{})
 }
 
 func NewProjectsFilter() Filters {
 	f := make(Filters, 1)
-	f["stage"] = Filter{Targets: []string{"working"}, Func: inclusiveFilter}
+	f = append(f, InclusiveStringFilter{Field: "stage", Values: map[string]struct{}{"working": {}}})
 
 	return f
 }

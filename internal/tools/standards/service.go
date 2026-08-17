@@ -5,6 +5,7 @@ import (
 	"ballot-tool/internal/filereader"
 	"ballot-tool/internal/utils/config"
 	"ballot-tool/internal/utils/normalization"
+	"ballot-tool/internal/utils/parsing"
 	"errors"
 	"fmt"
 	"log"
@@ -26,7 +27,8 @@ func (s *Service) GenerateAktualitetList(in string) error {
 
 	filters := filereader.NewProjectsFilter()
 	prefixes := append(norskStandardNational, technicalOtherNational...)
-	filters.NewBeginsWith("reference", prefixes, true)
+	set := parsing.ToSet(prefixes)
+	filters.NewBeginsWith("reference", set)
 	log.Print(filters)
 
 	standards, err := filereader.LoadStandardsDashboard(path, filters)
@@ -73,7 +75,8 @@ func (s *Service) CountTotalUniqueProducts(in string) error {
 	path := filepath.Join(s.cfg.InputPath, in)
 	filters := filereader.NewProjectsFilter()
 	prefixes := append(norskStandardNational, technicalOtherNational...)
-	filters.NewBeginsWith("reference", prefixes, true)
+	set := parsing.ToSet(prefixes)
+	filters.NewBeginsWith("reference", set)
 	standards, err := filereader.LoadStandardsDashboard(path, filters)
 	if err != nil {
 		return fmt.Errorf("error loading data at path %s: %w", path, err)

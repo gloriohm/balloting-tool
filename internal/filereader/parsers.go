@@ -44,7 +44,7 @@ func parseCSV[T any](path string, filters Filters, mapper func(Row) (T, error)) 
 			return nil, err
 		}
 
-		row := make(Row)
+		row := make(Row, len(headers))
 
 		for i, header := range headers {
 			if i < len(record) {
@@ -52,7 +52,12 @@ func parseCSV[T any](path string, filters Filters, mapper func(Row) (T, error)) 
 			}
 		}
 
-		if !passesFilters(row, filters) {
+		ok, err := filters.Match(row)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
 			continue
 		}
 
@@ -72,7 +77,7 @@ func parseCSV[T any](path string, filters Filters, mapper func(Row) (T, error)) 
 	return out, nil
 }
 
-func parseExcel[T any](path string, filter Filters, mapper func(Row) (T, error)) ([]T, error) {
+func parseExcel[T any](path string, filters Filters, mapper func(Row) (T, error)) ([]T, error) {
 	f, err := excelize.OpenFile(path)
 	if err != nil {
 		return nil, err
@@ -109,7 +114,12 @@ func parseExcel[T any](path string, filter Filters, mapper func(Row) (T, error))
 			}
 		}
 
-		if !passesFilters(row, filter) {
+		ok, err := filters.Match(row)
+		if err != nil {
+			return nil, err
+		}
+
+		if !ok {
 			continue
 		}
 

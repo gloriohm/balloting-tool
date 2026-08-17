@@ -3,6 +3,7 @@ package main
 import (
 	"ballot-tool/internal/app"
 	"flag"
+	"fmt"
 	"log"
 
 	"github.com/joho/godotenv"
@@ -22,6 +23,8 @@ func main() {
 
 	flag.Parse()
 
+	fmt.Println(*from)
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -35,6 +38,10 @@ func main() {
 	case "standards":
 		if err := app.RunStandardsTool(*job, *from, *to, *file, *opt, *dev); err != nil {
 			log.Fatalf("noe gikk galt: %s", err)
+		}
+	case "committee":
+		if err := app.RunCommitteeTool(*file, *from, *to); err != nil {
+			log.Fatalf("noe fikk galt: %s", err)
 		}
 	default:
 		log.Fatalf("unknown tool: %s\n", *tool)

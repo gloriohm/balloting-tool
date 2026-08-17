@@ -1,6 +1,7 @@
 package committee
 
 import (
+	"ballot-tool/internal/filereader"
 	"encoding/csv"
 	"io"
 	"os"
@@ -43,4 +44,29 @@ func loadAllCompanies(path string) (map[string]string, error) {
 	}
 
 	return result, nil
+}
+
+func parseEngagement(in filereader.NationalEngagementsRow) Engagement {
+	out := Engagement{
+		Committee: in.Committee.Reference,
+		FirstName: in.Person.FirstName,
+		LastName:  in.Person.LastName,
+		Email:     in.Person.Email,
+		From:      in.Commitment.Start,
+	}
+
+	if !in.Commitment.End.IsZero() {
+		out.To = &in.Commitment.End
+	}
+
+	return out
+}
+
+func parseEngagements(in []filereader.NationalEngagementsRow) []Engagement {
+	var out []Engagement
+	for _, e := range in {
+		out = append(out, parseEngagement(e))
+	}
+
+	return out
 }

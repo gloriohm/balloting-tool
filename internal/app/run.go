@@ -1,8 +1,10 @@
 package app
 
 import (
+	"ballot-tool/internal/api/brreg"
 	"ballot-tool/internal/api/sdimport"
 	"ballot-tool/internal/tools/ballot"
+	"ballot-tool/internal/tools/committee"
 	"ballot-tool/internal/tools/standards"
 	"ballot-tool/internal/utils/config"
 	"fmt"
@@ -59,6 +61,26 @@ func RunStandardsTool(job, from, to, filename, opts string, dev bool) error {
 		}
 	default:
 		log.Println("unknown job")
+	}
+
+	return nil
+}
+
+func RunCommitteeTool(path, from, to string) error {
+	cfg, err := config.InitConfig()
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(cfg.OutputPath, 0o755); err != nil {
+		return fmt.Errorf("create output dir: %w", err)
+	}
+
+	brreg := brreg.NewClient()
+	svc := committee.NewService(brreg, cfg)
+
+	if err := svc.CountExpertEngagements(path, from, to); err != nil {
+		return fmt.Errorf("failed to genereate experts report: %w", err)
 	}
 
 	return nil

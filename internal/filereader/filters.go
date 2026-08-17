@@ -3,76 +3,166 @@ package filereader
 import (
 	"ballot-tool/internal/utils/normalization"
 	"strings"
+	"time"
 )
 
-type Filters map[string]Filter
-
-type Filter struct {
-	Targets []string
-	Func    FilterFunc
+type Filter interface {
+	Match(Row) (bool, error)
 }
 
-type FilterFunc func(have string, want []string) bool
+type Filters []Filter
 
-func inclusiveFilter(have string, want []string) bool {
-	have = normalization.NormalizeString(have)
-	for _, target := range want {
-		if normalization.NormalizeString(target) == have {
-			return true
+type InclusiveStringFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type ExclusiveStringFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type BeginsWithFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type GreaterOrEqualTime struct {
+	Field string
+	Value time.Time
+}
+
+type LessOrEqualTime struct {
+	Field string
+	Value time.Time
+}
+
+type HasPrefixFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type NotPrefixFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type HasSuffixFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type NotSuffixFilter struct {
+	Field  string
+	Values map[string]struct{}
+}
+
+type EngagementMinRangeFilter struct {
+}
+
+func (f EngagementMinRangeFilter) Match(row Row) (bool, error) {
+	from, err := time.Parse("2006-01-02", row["commitment_from"])
+	if err != nil {
+		return false, nil
+	}
+
+	to, err := time.Parse("2006-01-02", row["commitment_to"])
+	if err != nil {
+		return true, nil
+	}
+
+	fromPlusOneWeek := from.AddDate(0, 0, 7)
+
+	if !to.After(fromPlusOneWeek) {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (f InclusiveStringFilter) Match(row Row) (bool, error) {
+	_, ok := f.Values[row[f.Field]]
+	return ok, nil
+}
+
+func (f ExclusiveStringFilter) Match(row Row) (bool, error) {
+	_, ok := f.Values[row[f.Field]]
+	return !ok, nil
+}
+
+func (f GreaterOrEqualTime) Match(row Row) (bool, error) {
+	v, err := time.Parse("2006-01-02", row[f.Field])
+	if err != nil {
+		return false, nil
+	}
+
+	return !v.Before(f.Value), nil
+}
+
+func (f LessOrEqualTime) Match(row Row) (bool, error) {
+	v, err := time.Parse("2006-01-02", row[f.Field])
+	if err != nil {
+		return false, nil
+	}
+
+	return !v.After(f.Value), nil
+}
+
+func (f HasPrefixFilter) Match(row Row) (bool, error) {
+	have := normalization.NormalizeString(row[f.Field])
+	for v := range f.Values {
+		if strings.HasPrefix(have, normalization.NormalizeString(v)) {
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 }
 
-func inclusiveHasPrefixFilter(have string, want []string) bool {
-	have = normalization.NormalizeString(have)
-	for _, target := range want {
-		if strings.HasPrefix(have, normalization.NormalizeString(target)) {
-			return true
+func (f NotPrefixFilter) Match(row Row) (bool, error) {
+	have := normalization.NormalizeString(row[f.Field])
+	for v := range f.Values {
+		if strings.HasPrefix(have, normalization.NormalizeString(v)) {
+			return false, nil
 		}
 	}
 
-	return false
+	return true, nil
 }
 
-func exclusiveFilter(have string, want []string) bool {
-	have = normalization.NormalizeString(have)
-	for _, target := range want {
-		if normalization.NormalizeString(target) == have {
-			return false
+func (f HasSuffixFilter) Match(row Row) (bool, error) {
+	have := normalization.NormalizeString(row[f.Field])
+	for v := range f.Values {
+		if strings.HasSuffix(have, normalization.NormalizeString(v)) {
+			return true, nil
 		}
 	}
 
-	return true
+	return false, nil
 }
 
-func exclusiveHasPrefixFilter(have string, want []string) bool {
-	have = normalization.NormalizeString(have)
-	for _, target := range want {
-		if strings.HasPrefix(have, normalization.NormalizeString(target)) {
-			return false
+func (f NotSuffixFilter) Match(row Row) (bool, error) {
+	have := normalization.NormalizeString(row[f.Field])
+	for v := range f.Values {
+		if strings.HasSuffix(have, normalization.NormalizeString(v)) {
+			return false, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
 
-func passesFilters(row Row, filters Filters) bool {
-	for col, filter := range filters {
-		value, exists := row[col]
-		if !exists {
-			return false
+func (fs Filters) Match(row Row) (bool, error) {
+	for _, f := range fs {
+		ok, err := f.Match(row)
+		if err != nil {
+			return false, err
 		}
 
-		if filter.Func == nil {
-			return false
-		}
-
-		if !filter.Func(value, filter.Targets) {
-			return false
+		if !ok {
+			return false, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
