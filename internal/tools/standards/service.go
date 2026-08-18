@@ -214,6 +214,19 @@ func (s *Service) FindStandardsWithXML(in string) error {
 	return nil
 }
 
+func (s *Service) DownloadFile(pubID string) error {
+	itemType, err := sdimport.StringToItemType("standard")
+	if err != nil {
+		return err
+	}
+	itemFormat, err := sdimport.StringToItemFormat("xml")
+	if err != nil {
+		return err
+	}
+
+	return s.sdimport.DownloadFile(pubID, s.cfg.OutputPath, itemType, itemFormat)
+}
+
 func (s *Service) DownloadFiles(in string, opts string) error {
 	path := filepath.Join(s.cfg.InputPath, in)
 

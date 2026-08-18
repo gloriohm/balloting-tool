@@ -29,7 +29,7 @@ func RunBallotTool() error {
 	return nil
 }
 
-func RunStandardsTool(job, from, to, filename, opts string, dev bool) error {
+func RunStandardsTool(job, from, to, filename, opts, targetID string, dev bool) error {
 	cfg, err := config.InitConfig()
 	if err != nil {
 		return err
@@ -56,6 +56,10 @@ func RunStandardsTool(job, from, to, filename, opts string, dev bool) error {
 			return err
 		}
 	case "download":
+		if err := stdSvc.DownloadFile(targetID); err != nil {
+			return err
+		}
+	case "bulk":
 		if err := stdSvc.DownloadFiles(filename, opts); err != nil {
 			return err
 		}

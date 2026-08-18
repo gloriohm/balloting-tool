@@ -2,6 +2,7 @@ package sdimport
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -178,4 +179,32 @@ func (p *Project) getPublicationURNs() []string {
 	}
 
 	return pubURNs
+}
+
+func StringToItemFormat(s string) (ReleaseItemFormat, error) {
+	switch s {
+	case "pdf":
+		return ReleaseItemFormatPDF, nil
+	case "xml":
+		return ReleaseItemFormatXML, nil
+	case "word":
+		return ReleaseItemFormatWord, nil
+	case "any":
+		return ReleaseItemFormatAny, nil
+	default:
+		return ReleaseItemFormatAny, errors.New("invalid string")
+	}
+}
+
+func StringToItemType(s string) (ReleaseItemType, error) {
+	switch s {
+	case "standard":
+		return ReleaseItemTypeStandard, nil
+	case "source":
+		return ReleaseItemTypeSource, nil
+	case "other":
+		return ReleaseItemTypeOther, nil
+	default:
+		return ReleaseItemTypeOther, errors.New("invalid string")
+	}
 }

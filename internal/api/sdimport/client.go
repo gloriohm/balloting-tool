@@ -246,3 +246,23 @@ func (c *Client) GetFile(ref ContentRef, dir string) error {
 
 	return nil
 }
+
+func (c *Client) DownloadFile(pubID, destination string, filetype ReleaseItemType, fileformat ReleaseItemFormat) error {
+	pub, err := c.GetPublication(pubID)
+	if err != nil {
+		return err
+	}
+
+	items, err := pub.GetReleaseItems(filetype, fileformat)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if err := c.GetFile(item.ContentRef, destination); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

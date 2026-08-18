@@ -20,6 +20,7 @@ func main() {
 	to := flag.String("to", "2026-06-03", "publication date range begin end")
 	opt := flag.String("opt", "", "use to specify job variable")
 	file := flag.String("file", "", "name and file extension of input file")
+	target := flag.String("target", "", "id of target of job")
 
 	flag.Parse()
 
@@ -36,7 +37,7 @@ func main() {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "standards":
-		if err := app.RunStandardsTool(*job, *from, *to, *file, *opt, *dev); err != nil {
+		if err := app.RunStandardsTool(*job, *from, *to, *file, *opt, *target, *dev); err != nil {
 			log.Fatalf("noe gikk galt: %s", err)
 		}
 	case "committee":
