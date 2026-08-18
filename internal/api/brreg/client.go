@@ -23,12 +23,12 @@ func NewClient() *Client {
 	}
 }
 
-func (c *Client) GetHovedenhetByOrgnummer(orgnummer string) (*Hovedenhet, error) {
+func (c *Client) GetHovedenhetByOrgnummer(orgnummer string) (Hovedenhet, error) {
 	endpoint := fmt.Sprintf("%s/enhetsregisteret/api/enheter/%s", c.BaseURL, orgnummer)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
-		return nil, err
+		return Hovedenhet{}, err
 	}
 	log.Println("requesting ", endpoint)
 
@@ -37,23 +37,23 @@ func (c *Client) GetHovedenhetByOrgnummer(orgnummer string) (*Hovedenhet, error)
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return nil, err
+		return Hovedenhet{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, ErrNotFound
+		return Hovedenhet{}, ErrNotFound
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+		return Hovedenhet{}, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
 	}
 
 	var hovedenhet Hovedenhet
 	if err := json.NewDecoder(resp.Body).Decode(&hovedenhet); err != nil {
-		return nil, ErrUnmarshallingResponse
+		return Hovedenhet{}, ErrUnmarshallingResponse
 	}
 
-	return &hovedenhet, nil
+	return hovedenhet, nil
 }
